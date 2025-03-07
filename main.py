@@ -7,10 +7,29 @@ from queries import get_vendors_saldo
 from queries import get_transaksi_vendor
 from pool import db_pool
 from uuid import uuid4  
+import subprocess
+import os
+from fastapi.responses import FileResponse
+
 
 
 app = FastAPI()
 
+def run_script():
+    script_path = os.path.join('proccessing', 'proccessing_data.py')
+    process = subprocess.Popen(
+        ['python', script_path],
+        stdout=subprocess.PIPE, 
+        stderr=subprocess.PIPE
+    )
+    
+    # Menangkap hasil output
+    stdout, stderr = process.communicate()
+    
+    if process.returncode == 0:
+        print(f"Process completed successfully:\n{stdout.decode()}")
+    else:
+        print(f"Process failed with error:\n{stderr.decode()}")
 
 # Fungsi untuk mengekspor data ke CSV
 def export_to_csv():
@@ -74,13 +93,21 @@ async def prepare(background_tasks: BackgroundTasks):
 @app.get("/processing")
 async def prepare(background_tasks: BackgroundTasks):
     # Menambahkan tugas ekspor ke background
-    task_id = str(uuid4())
-    background_tasks.add_task(get_vendors_saldo.get_vendors_and_saldo, 'TJS','2010101','2024-01-01')
-
-    background_tasks.add_task(get_transaksi_vendor.get_transaksi_vendor, 'TJS','2010101','2024-01-01','2024-12-31', task_id)
+    background_tasks.add_task(run_script)
     
     return {"message": "Export process started in the background"}
 
 # Untuk menjalankan server FastAPI dengan Uvicorn
 # Uvicorn biasanya dijalankan dengan command seperti ini di terminal
 # uvicorn main:app --reload
+
+@app.get("/download/{file_name}")
+async def download_file(file_name: str):
+    # Tentukan path ke file yang akan didownload
+    file_path = os.path.join("", file_name)
+
+    # Periksa apakah file ada di server
+    if os.path.exists(file_path):
+        return FileResponse(file_path, media_type="application/octet-stream", headers={"Content-Disposition": f"attachment; filename={file_name}"})
+    else:
+        return {"error": "File not found"}
