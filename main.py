@@ -15,6 +15,7 @@ from fastapi import FastAPI, APIRouter,BackgroundTasks
 from proccessing import proccessing_data
 from progress import backgorund
 from request.buku_besar_report_dto import DownloadDto, PreparingDto,ProcessingDto
+from fastapi.middleware.cors import CORSMiddleware
 
 
 
@@ -86,9 +87,22 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+origins = [
+    "*",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 def run_script(task_id: str, start_date:str, end_date: str, filename):
     proccessing_data.proccess_data(task_id, start_date, end_date,filename)
 
 # Untuk menjalankan server FastAPI dengan Uvicorn
 # Uvicorn biasanya dijalankan dengan command seperti ini di terminal
 # uvicorn main:app --reload
+
