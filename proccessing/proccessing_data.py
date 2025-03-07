@@ -1,8 +1,12 @@
 import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment
+from progress import backgorund
 
-def proccess_data():
+def proccess_data(task_id):
+    state_progres = backgorund.read_proccessing()
+    state_progres[task_id] = {"status": "started"}
+
     df_saldo = pd.read_csv('saldo.csv')
     df_transaksi = pd.read_csv('transaksi.csv')
 
@@ -52,7 +56,6 @@ def proccess_data():
         saldo_cal=0
 
         for _, data_row in group.iterrows():
-            # ws[f'A{row - 2 }'] = data_row['Name']
 
             if counting == 1:
                 saldo_awal = data_row['Saldo']
@@ -93,5 +96,5 @@ def proccess_data():
     # Menyimpan file Excel
     wb.save("report_buku_besar_vendor.xlsx")
     print("Data has been processed and saved.")
-
-proccess_data()
+    state_progres[task_id]["status"] = "completed"
+    backgorund.write_proccessing(state_progres)

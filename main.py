@@ -1,4 +1,3 @@
-from fastapi import FastAPI, BackgroundTasks
 import pymysql
 import csv
 from tqdm import tqdm  # Importing tqdm for the progress bar
@@ -9,105 +8,85 @@ from pool import db_pool
 from uuid import uuid4  
 import subprocess
 import os
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse,JSONResponse
+from dotenv import load_dotenv
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, APIRouter,BackgroundTasks
+from proccessing import proccessing_data
+from progress import backgorund
 
 
 
-app = FastAPI()
+load_dotenv()
 
-def run_script():
-    script_path = os.path.join('proccessing', 'proccessing_data.py')
-    process = subprocess.Popen(
-        ['python', script_path],
-        stdout=subprocess.PIPE, 
-        stderr=subprocess.PIPE
-    )
-    
-    # Menangkap hasil output
-    stdout, stderr = process.communicate()
-    
-    if process.returncode == 0:
-        print(f"Process completed successfully:\n{stdout.decode()}")
-    else:
-        print(f"Process failed with error:\n{stderr.decode()}")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
 
-# Fungsi untuk mengekspor data ke CSV
-def export_to_csv():
-    # Setup connection pool
 
-    # Create a connection
-    conn = db_pool.pool.connection()
-    cursor = conn.cursor()
+    #init base route
+    baseRoute = APIRouter(prefix='/v1')
 
-    # Set the chunk size for fetching rows
-    chunk_size = 6000
+    @app.get("/preparing")
+    async def prepare(background_tasks: BackgroundTasks):
+        # Menambahkan tugas ekspor ke background
+        task_id = str(uuid4())
+        background_tasks.add_task(get_vendors_saldo.get_vendors_and_saldo, 'TJS','2010101','2024-01-01')
 
-    # Execute a count query to estimate total number of rows
-    cursor.execute("SELECT COUNT(*) FROM gl_transaksi")
-    total_rows = cursor.fetchone()[0]
-
-    # Execute the select query to get the column names (required for writing header)
-    cursor.execute("SELECT * FROM gl_transaksi")
-    columns = [desc[0] for desc in cursor.description]
-
-    # Open a CSV file to export the data
-    csv_file_path = 'output.csv'
-
-    # Open CSV file for writing
-    with open(csv_file_path, mode='w', newline='', encoding='utf-8') as csv_file:
-        writer = csv.writer(csv_file)
+        background_tasks.add_task(get_transaksi_vendor.get_transaksi_vendor, 'TJS','2010101','2024-01-01','2024-12-31', task_id)
         
-        # Write the header
-        writer.writerow(columns)
+        return {"message": "Export process started in the background", "task_id": task_id}
 
-        # Calculate the number of chunks
-        total_chunks = (total_rows // chunk_size) + 1
+    @app.get("/processing")
+    async def prepare(background_tasks: BackgroundTasks):
+        task_id = str(uuid4())
+        # Menambahkan tugas ekspor ke background
+        background_tasks.add_task(run_script, task_id)
         
-        # Create a progress bar
-        with tqdm(total=total_chunks, desc="Exporting data", unit="chunk") as pbar:
-            # Fetch data in chunks and write to the CSV file
-            while True:
-                rows = cursor.fetchmany(chunk_size)
-                if not rows:
-                    break  # Exit the loop when no more data is available
-                writer.writerows(rows)  # Write the fetched rows
-                pbar.update(1)  # Update the progress bar by 1 chunk
-
-    # Close the cursor and connection
-    cursor.close()
-    conn.close()
-
-    print(f"Data exported to {csv_file_path}")
+        return {"message": "Export process started in the background", "task_id": task_id}
 
 
-@app.get("/preparing")
-async def prepare(background_tasks: BackgroundTasks):
-    # Menambahkan tugas ekspor ke background
-    task_id = str(uuid4())
-    background_tasks.add_task(get_vendors_saldo.get_vendors_and_saldo, 'TJS','2010101','2024-01-01')
+    @app.get("/download/{file_name}")
+    async def download_file(file_name: str):
+        # Tentukan path ke file yang akan didownload
+        file_path = os.path.join("", file_name)
 
-    background_tasks.add_task(get_transaksi_vendor.get_transaksi_vendor, 'TJS','2010101','2024-01-01','2024-12-31', task_id)
-    
-    return {"message": "Export process started in the background"}
+        # Periksa apakah file ada di server
+        if os.path.exists(file_path):
+            return FileResponse(file_path, media_type="application/octet-stream", headers={"Content-Disposition": f"attachment; filename={file_name}"})
+        else:
+            return {"error": "File not found"}
+        
+    @app.get("/processing-status/{task_id}")
+    async def task_status(task_id: str):
+        # Membaca status dari file JSON
+        status_data = backgorund.read_proccessing()
+        
+        if task_id in status_data:
+            return JSONResponse(content=status_data[task_id])
+        else:
+            return JSONResponse(content={"message": "Task not found"}, status_code=404)
+        
+    @app.get("/preparing-status/{task_id}")
+    async def task_status(task_id: str):
+        # Membaca status dari file JSON
+        status_data = backgorund.read_progress()
+        
+        if task_id in status_data:
+            return JSONResponse(content=status_data[task_id])
+        else:
+            return JSONResponse(content={"message": "Task not found"}, status_code=404)
 
-@app.get("/processing")
-async def prepare(background_tasks: BackgroundTasks):
-    # Menambahkan tugas ekspor ke background
-    background_tasks.add_task(run_script)
-    
-    return {"message": "Export process started in the background"}
+    #register route as wrap parent route
+    app.include_router(baseRoute)
+
+    yield  
+
+
+app = FastAPI(lifespan=lifespan)
+
+def run_script(task_id: str):
+    proccessing_data.proccess_data(task_id)
 
 # Untuk menjalankan server FastAPI dengan Uvicorn
 # Uvicorn biasanya dijalankan dengan command seperti ini di terminal
 # uvicorn main:app --reload
-
-@app.get("/download/{file_name}")
-async def download_file(file_name: str):
-    # Tentukan path ke file yang akan didownload
-    file_path = os.path.join("", file_name)
-
-    # Periksa apakah file ada di server
-    if os.path.exists(file_path):
-        return FileResponse(file_path, media_type="application/octet-stream", headers={"Content-Disposition": f"attachment; filename={file_name}"})
-    else:
-        return {"error": "File not found"}
