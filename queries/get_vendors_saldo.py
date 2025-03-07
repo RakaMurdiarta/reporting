@@ -29,7 +29,7 @@ def get_vendors_and_saldo(entitas, coa, start_date):
         AND gl_transaksi.tanggal_transaksi < %s
     GROUP BY company.CompanyID, company.Name
     """
-    csv_file_path = 'saldo.csv'
+    csv_file_path = 'temp/saldo.csv'
 
     try:
         conn = db_pool.pool.connection()

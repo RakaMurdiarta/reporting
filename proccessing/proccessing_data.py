@@ -9,8 +9,8 @@ def proccess_data(task_id, start_date:str, end_date: str,filename):
         state_progres[task_id] = {"status": "started"}
         backgorund.write_proccessing(state_progres)
 
-        df_saldo = pd.read_csv('saldo.csv')
-        df_transaksi = pd.read_csv('transaksi.csv')
+        df_saldo = pd.read_csv('temp/saldo.csv')
+        df_transaksi = pd.read_csv('temp/transaksi.csv')
 
         # Menggabungkan data
         merged_df = pd.merge(df_transaksi, df_saldo, left_on='company_vendor_id', right_on='CompanyID', how='inner')
@@ -95,7 +95,7 @@ def proccess_data(task_id, start_date:str, end_date: str,filename):
             cell.alignment = Alignment(horizontal='center')
 
         # Menyimpan file Excel
-        wb.save(filename)
+        wb.save(f'temp/{filename}')
         print("Data has been processed and saved.")
         state_progres[task_id]["status"] = "completed"
         backgorund.write_proccessing(state_progres)

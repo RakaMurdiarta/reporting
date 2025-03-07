@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI):
     @app.get("/download/{file_name}",tags=['Reporting'])
     async def download_file(file_name: str):
         # Tentukan path ke file yang akan didownload
-        file_path = os.path.join("", file_name)
+        file_path = os.path.join("temp", file_name)
 
         # Periksa apakah file ada di server
         if os.path.exists(file_path):

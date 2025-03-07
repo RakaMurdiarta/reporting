@@ -24,13 +24,13 @@ def get_transaksi_vendor(entitas, coa, start_date, end_date, task_id):
         AND gl_transaksi_detail.coa = %s
         AND gl_transaksi.company_CompanyID LIKE %s
     """
-    csv_file_path = 'transaksi.csv'
+    csv_file_path = 'temp/transaksi.csv'
 
     try:
         progress = backgorund.read_progress()
         progress[task_id] = {"status": "started"}
         backgorund.write_progress(progress)
-        
+
         conn = db_pool.pool.connection()
         cursor = conn.cursor()
         chunk_size = 6000

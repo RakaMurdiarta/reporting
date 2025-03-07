@@ -1,7 +1,7 @@
 import os
 import json
-PROGRESS_FILE = 'progress.json'
-PROCCESSING_FILE = 'proccessing.json'
+PROGRESS_FILE = 'temp/progress.json'
+PROCCESSING_FILE = 'temp/proccessing.json'
 
 def read_progress():
     if os.path.exists(PROGRESS_FILE):

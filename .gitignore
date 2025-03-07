@@ -5,3 +5,4 @@ __pycache__
 progress.json
 .env
 proccessing.json
+temp/*
