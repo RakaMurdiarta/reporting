@@ -29,7 +29,8 @@ def get_transaksi_vendor(entitas, coa, start_date, end_date, task_id):
     try:
         progress = backgorund.read_progress()
         progress[task_id] = {"status": "started"}
-
+        backgorund.write_progress(progress)
+        
         conn = db_pool.pool.connection()
         cursor = conn.cursor()
         chunk_size = 6000
@@ -48,12 +49,14 @@ def get_transaksi_vendor(entitas, coa, start_date, end_date, task_id):
         conn.close()
         progress[task_id]["status"] = "completed"
         print(f"Data exported to {csv_file_path}")
+        backgorund.write_progress(progress)
     except pymysql.MySQLError as e:
         print(f"Error executing query: {e}")
         progress[task_id]["status"] = "failed"
+        backgorund.write_progress(progress)
+
         return None    
     finally:
-        backgorund.write_progress(progress)
         if conn:
             conn.close()
             db_pool.pool.close()
