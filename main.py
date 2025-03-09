@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, APIRouter,BackgroundTasks
 from proccessing import proccessing_data
-from progress import backgorund
+from progress import states
 from request.buku_besar_report_dto import DownloadDto, PreparingDto,ProcessingDto
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
     async def preparing(payload: PreparingDto, background_tasks: BackgroundTasks):
         # Menambahkan tugas ekspor ke background
         task_id = str(uuid4())
-        background_tasks.add_task(get_vendors_saldo.get_vendors_and_saldo, payload.enititas,payload.coa,payload.start_date)
+        background_tasks.add_task(get_vendors_saldo.get_vendors_and_saldo, payload.enititas,payload.coa,payload.start_date,task_id)
 
         background_tasks.add_task(get_transaksi_vendor.get_transaksi_vendor, payload.enititas,payload.coa,payload.start_date,payload.end_date, task_id)
         
@@ -62,20 +62,20 @@ async def lifespan(app: FastAPI):
     @app.get("/processing-status/{task_id}",tags=['Reporting'])
     async def checking_status_preparing(task_id: str):
         # Membaca status dari file JSON
-        status_data = backgorund.read_proccessing()
+        status_data = states.read_proccessing()
         
         if task_id in status_data:
-            return JSONResponse(content=status_data[task_id])
+            return JSONResponse(content={'status': status_data[task_id]['status']})        
         else:
             return JSONResponse(content={"message": "Task not found"}, status_code=404)
         
     @app.get("/preparing-status/{task_id}",tags=['Reporting'])
     async def checking_status_processing(task_id: str):
         # Membaca status dari file JSON
-        status_data = backgorund.read_progress()
+        status_data = states.read_progress()
         
         if task_id in status_data:
-            return JSONResponse(content=status_data[task_id])
+            return JSONResponse(content={'status': status_data[task_id]['status']})
         else:
             return JSONResponse(content={"message": "Task not found"}, status_code=404)
 

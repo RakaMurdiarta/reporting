@@ -3,9 +3,10 @@ import csv
 from tqdm import tqdm
 import pymysql
 from pool import db_pool
+from progress import states
 
 
-def get_vendors_and_saldo(entitas, coa, start_date):
+def get_vendors_and_saldo(entitas, coa, start_date,task_id):
     # Define saldo calculation depending on COA prefix
     if str(coa)[0] in ['1', '5', '6', '7', '8']:
         saldo_column = "SUM(debit - kredit) AS Saldo"
@@ -29,9 +30,13 @@ def get_vendors_and_saldo(entitas, coa, start_date):
         AND gl_transaksi.tanggal_transaksi < %s
     GROUP BY company.CompanyID, company.Name
     """
-    csv_file_path = 'temp/saldo.csv'
+    csv_file_path = f'temp/{task_id}_saldo.csv'
 
     try:
+        progress = states.read_progress()
+        if task_id not in progress:
+            progress[task_id] = {"status": "started", "filenames": {}, "tasks": {}}
+        progress[task_id]['tasks']["get_vendors_and_saldo"]= 'in_progress'
         conn = db_pool.pool.connection()
         cursor = conn.cursor()
         chunk_size = 6000
@@ -51,11 +56,17 @@ def get_vendors_and_saldo(entitas, coa, start_date):
 
         cursor.close()
         conn.close()
-
+        progress[task_id]["tasks"]["get_vendors_and_saldo"] = "completed"
+        progress[task_id]["filenames"]['get_vendors_and_saldo'] = csv_file_path
+        if all(status == "completed" for status in progress[task_id]["tasks"].values()):
+            progress[task_id]["status"] = "completed"
         print(f"Data exported to {csv_file_path}")
+        states.write_progress(progress)
 
     except pymysql.MySQLError as e:
         print(f"Error executing query: {e}")
+        progress[task_id]["tasks"]["get_vendors_and_saldo"] = "failed"
+        progress[task_id]["status"] = "failed"
         return None
     finally:
         # Ensure the connection is closed

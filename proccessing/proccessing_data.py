@@ -1,13 +1,13 @@
 import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment
-from progress import backgorund
+from progress import states
 
-def proccess_data(task_id, start_date:str, end_date: str,filename):
+def proccess_data(task_id, start_date:str, end_date: str,filename: str):
     try:
-        state_progres = backgorund.read_proccessing()
+        state_progres = states.read_proccessing()
         state_progres[task_id] = {"status": "started"}
-        backgorund.write_proccessing(state_progres)
+        states.write_proccessing(state_progres)
 
         df_saldo = pd.read_csv('temp/saldo.csv')
         df_transaksi = pd.read_csv('temp/transaksi.csv')
@@ -24,7 +24,7 @@ def proccess_data(task_id, start_date:str, end_date: str,filename):
 
 
         state_progres[task_id] = {"status": "process"}
-        backgorund.write_proccessing(state_progres)
+        states.write_proccessing(state_progres)
 
         # Menulis ke Excel menggunakan openpyxl
         wb = Workbook()
@@ -98,8 +98,8 @@ def proccess_data(task_id, start_date:str, end_date: str,filename):
         wb.save(f'temp/{filename}')
         print("Data has been processed and saved.")
         state_progres[task_id]["status"] = "completed"
-        backgorund.write_proccessing(state_progres)
+        states.write_proccessing(state_progres)
     except Exception as e:
         print(f'Error: {e}')
         state_progres[task_id]["status"] = "failed"
-        backgorund.write_proccessing(state_progres)
+        states.write_proccessing(state_progres)

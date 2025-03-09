@@ -3,7 +3,7 @@ import csv
 from tqdm import tqdm
 import pymysql
 from pool import db_pool
-from progress import backgorund
+from progress import states
 
 def get_transaksi_vendor(entitas, coa, start_date, end_date, task_id):
     sql = f"""
@@ -24,13 +24,13 @@ def get_transaksi_vendor(entitas, coa, start_date, end_date, task_id):
         AND gl_transaksi_detail.coa = %s
         AND gl_transaksi.company_CompanyID LIKE %s
     """
-    csv_file_path = 'temp/transaksi.csv'
+    csv_file_path = f'temp/{task_id}_transaksi.csv'
 
     try:
-        progress = backgorund.read_progress()
-        progress[task_id] = {"status": "started"}
-        backgorund.write_progress(progress)
-
+        progress = states.read_progress()
+        if task_id not in progress:
+            progress[task_id] = {"status": "started", "filenames": {}, "tasks": {}}
+        progress[task_id]['tasks']["get_transaksi_vendor"]= 'in_progress'
         conn = db_pool.pool.connection()
         cursor = conn.cursor()
         chunk_size = 6000
@@ -47,13 +47,17 @@ def get_transaksi_vendor(entitas, coa, start_date, end_date, task_id):
                 writer.writerows(rows)
         cursor.close()
         conn.close()
-        progress[task_id]["status"] = "completed"
+        progress[task_id]["tasks"]["get_transaksi_vendor"] = "completed"
+        progress[task_id]["filenames"]['get_transaksi_vendor'] = csv_file_path
+        if all(status == "completed" for status in progress[task_id]["tasks"].values()):
+            progress[task_id]["status"] = "completed"
         print(f"Data exported to {csv_file_path}")
-        backgorund.write_progress(progress)
+        states.write_progress(progress)
     except pymysql.MySQLError as e:
         print(f"Error executing query: {e}")
+        progress[task_id]["tasks"]["get_transaksi_vendor"] = "failed"
         progress[task_id]["status"] = "failed"
-        backgorund.write_progress(progress)
+        states.write_progress(progress)
 
         return None    
     finally:
