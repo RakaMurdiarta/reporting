@@ -41,11 +41,19 @@ async def lifespan(app: FastAPI):
     @app.post("/processing",tags=['Reporting'])
     async def processing(payload: ProcessingDto,background_tasks: BackgroundTasks):
         task_id = str(uuid4())
+        preparing_state = states.read_progress()
+        if not preparing_state[payload.preparing_task_id]['status'] == 'completed':
+            return JSONResponse(content={'message': 'cannot proccesing the data'}) 
+        
+        range_dates = preparing_state[payload.preparing_task_id]['range_date']
+        start_date = range_dates['start_date']
+        end_date = range_dates['end_date']
         # Menambahkan tugas ekspor ke background
-        filename= f'report_buku_besar_{payload.start_date}_{payload.end_date}.xlsx'
-        background_tasks.add_task(run_script, task_id, payload.start_date,payload.end_date, filename, payload.preparing_task_id)
+        expose_name = f'{task_id}_report_buku_besar_{start_date}_{end_date}.xlsx'
+        filename= f'temp/{expose_name}'
+        background_tasks.add_task(run_script, task_id, filename, payload.preparing_task_id)
 
-        return {"message": "Processing", "task_id": task_id, "file_name": filename}
+        return {"message": "Processing", "task_id": task_id, "file_name": expose_name}
 
 
     @app.get("/download/{file_name}",tags=['Reporting'])
@@ -99,8 +107,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def run_script(task_id: str, start_date:str, end_date: str, filename,preparing_task_id: str):
-    proccessing_data.proccess_data(task_id, start_date, end_date,filename,preparing_task_id)
+def run_script(task_id: str, filename: str,preparing_task_id: str):
+    proccessing_data.proccess_data(task_id,filename,preparing_task_id)
 
 # Untuk menjalankan server FastAPI dengan Uvicorn
 # Uvicorn biasanya dijalankan dengan command seperti ini di terminal

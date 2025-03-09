@@ -35,7 +35,7 @@ def get_vendors_and_saldo(entitas, coa, start_date,task_id):
     try:
         progress = states.read_progress()
         if task_id not in progress:
-            progress[task_id] = {"status": "started", "filenames": {}, "tasks": {}}
+            progress[task_id] = {"status": "started", "filenames": {}, "tasks": {},'range_date': {}}
         progress[task_id]['tasks']["get_vendors_and_saldo"]= 'in_progress'
         conn = db_pool.pool.connection()
         cursor = conn.cursor()
@@ -58,6 +58,7 @@ def get_vendors_and_saldo(entitas, coa, start_date,task_id):
         conn.close()
         progress[task_id]["tasks"]["get_vendors_and_saldo"] = "completed"
         progress[task_id]["filenames"]['get_vendors_and_saldo'] = csv_file_path
+        progress[task_id]["range_date"]['start_date'] = start_date
         if all(status == "completed" for status in progress[task_id]["tasks"].values()):
             progress[task_id]["status"] = "completed"
         print(f"Data exported to {csv_file_path}")

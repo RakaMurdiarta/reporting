@@ -3,14 +3,13 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment
 from progress import states
 
-def proccess_data(task_id, start_date:str, end_date: str,filename: str, preparing_task_id: str):
+def proccess_data(task_id, filename: str, preparing_task_id: str):
     try:
         state_progres = states.read_proccessing()
         preparing_state = states.read_progress()
         state_progres[task_id] = {"status": "started"}
     
         states.write_proccessing(state_progres)
-
         df_saldo = pd.read_csv(preparing_state[preparing_task_id]['filenames']['get_vendors_and_saldo'])
         df_transaksi = pd.read_csv(preparing_state[preparing_task_id]['filenames']['get_transaksi_vendor'])
 
@@ -23,7 +22,6 @@ def proccess_data(task_id, start_date:str, end_date: str,filename: str, preparin
 
         # Mengelompokkan berdasarkan CompanyID
         grouped_df = db_export.groupby("CompanyID")[["debit", "kredit","tanggal_transaksi",'no_gl_transaksi','keterangan','coa_prefix', 'Saldo', 'coa', 'Name']].apply(lambda x: x.reset_index(drop=True))
-
 
         state_progres[task_id] = {"status": "process"}
         states.write_proccessing(state_progres)
@@ -97,7 +95,7 @@ def proccess_data(task_id, start_date:str, end_date: str,filename: str, preparin
             cell.alignment = Alignment(horizontal='center')
 
         # Menyimpan file Excel
-        wb.save(f'temp/{filename}')
+        wb.save(f'{filename}')
         print("Data has been processed and saved.")
         state_progres[task_id]["status"] = "completed"
         states.write_proccessing(state_progres)
