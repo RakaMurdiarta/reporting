@@ -47,6 +47,7 @@ def proccess_data(task_id, filename: str, preparing_task_id: str):
 
         # Menulis data ke sheet dengan penyesuaian layout
         row = 9  # Mulai dari row 9
+        sum=0
         for company_id, group in grouped_df.groupby(level=0):
             name = group.iloc[0]['Name']
             ws[f'A{row}'] = name
@@ -83,10 +84,16 @@ def proccess_data(task_id, filename: str, preparing_task_id: str):
                 row += 1
                 saldo_awal=saldo_cal
                 counting += 1
+                sum+=saldo_cal
             saldo_awal = 0
+            ws[f'F{row}'].font = Font(bold=True)
+            ws[f'F{row}'] = 'Saldo Akhir'
             ws[f'G{row}'] = saldo_cal
             row+=1
 
+        ws[f'F{row+1}'].font = Font(bold=True)
+        ws[f'F{row+1}'] = 'Total Saldo'
+        ws[f'G{row+1}'] = sum
 
         # Menambahkan style untuk header A8:C8
         header_cells = ws['A8:G8']  # Mengambil range sel header
