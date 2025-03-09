@@ -43,7 +43,7 @@ async def lifespan(app: FastAPI):
         task_id = str(uuid4())
         # Menambahkan tugas ekspor ke background
         filename= f'report_buku_besar_{payload.start_date}_{payload.end_date}.xlsx'
-        background_tasks.add_task(run_script, task_id, payload.start_date,payload.end_date, filename)
+        background_tasks.add_task(run_script, task_id, payload.start_date,payload.end_date, filename, payload.preparing_task_id)
 
         return {"message": "Processing", "task_id": task_id, "file_name": filename}
 
@@ -99,8 +99,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def run_script(task_id: str, start_date:str, end_date: str, filename):
-    proccessing_data.proccess_data(task_id, start_date, end_date,filename)
+def run_script(task_id: str, start_date:str, end_date: str, filename,preparing_task_id: str):
+    proccessing_data.proccess_data(task_id, start_date, end_date,filename,preparing_task_id)
 
 # Untuk menjalankan server FastAPI dengan Uvicorn
 # Uvicorn biasanya dijalankan dengan command seperti ini di terminal

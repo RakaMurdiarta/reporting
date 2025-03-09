@@ -9,6 +9,7 @@ class PreparingDto(BaseModel):
 class ProcessingDto(BaseModel):
     start_date: str
     end_date: str
+    preparing_task_id: str
 
 class DownloadDto(BaseModel):
     filename: str

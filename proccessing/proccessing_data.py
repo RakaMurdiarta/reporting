@@ -3,14 +3,16 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment
 from progress import states
 
-def proccess_data(task_id, start_date:str, end_date: str,filename: str):
+def proccess_data(task_id, start_date:str, end_date: str,filename: str, preparing_task_id: str):
     try:
         state_progres = states.read_proccessing()
+        preparing_state = states.read_progress()
         state_progres[task_id] = {"status": "started"}
+    
         states.write_proccessing(state_progres)
 
-        df_saldo = pd.read_csv('temp/saldo.csv')
-        df_transaksi = pd.read_csv('temp/transaksi.csv')
+        df_saldo = pd.read_csv(preparing_state[preparing_task_id]['filenames']['get_vendors_and_saldo'])
+        df_transaksi = pd.read_csv(preparing_state[preparing_task_id]['filenames']['get_transaksi_vendor'])
 
         # Menggabungkan data
         merged_df = pd.merge(df_transaksi, df_saldo, left_on='company_vendor_id', right_on='CompanyID', how='inner')
