@@ -51,6 +51,7 @@ def get_saldo_awal_transaksi_tanpa_vendor(task_id,coa, entitas,start_date):
 
     sql=f"""
     SELECT
+    {saldo_column}
     FROM gl_transaksi
     JOIN gl_transaksi_detail
         ON gl_transaksi_detail.transaksi_id = gl_transaksi.id
