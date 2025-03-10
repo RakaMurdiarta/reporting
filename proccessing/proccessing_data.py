@@ -26,6 +26,10 @@ def proccess_data(task_id, filename: str, preparing_task_id: str):
         state_progres[task_id] = {"status": "process"}
         states.write_proccessing(state_progres)
 
+        range_dates = preparing_state[preparing_task_id]['range_date']
+        start_date = range_dates['start_date']
+        end_date = range_dates['end_date']
+
         # Menulis ke Excel menggunakan openpyxl
         wb = Workbook()
         ws = wb.active
@@ -35,6 +39,10 @@ def proccess_data(task_id, filename: str, preparing_task_id: str):
         ws['D3'] = "Report Summary"
         ws['D3'].font = Font(size=18, bold=True)
         ws['D3'].alignment = Alignment(horizontal='center', vertical='center')
+        ws['D5'] = f"Periode : {start_date} - {end_date}"
+        ws['D5'].alignment = Alignment(horizontal='center', vertical='center')
+        ws['D5'].font = Font(size=14, bold=True)
+
 
         # Menulis header di row 8
         ws['A8'] = 'Name'
