@@ -20,6 +20,7 @@ def get_transaksi_vendor(entitas, coa, start_date, end_date, task_id):
     JOIN gl_transaksi_detail
         ON gl_transaksi_detail.transaksi_id = gl_transaksi.id
     WHERE gl_transaksi.tanggal_transaksi BETWEEN %s AND %s
+        AND gl_transaksi_detail.deleted_at IS NULL
         AND gl_transaksi.status_lvl_1 = 1
         AND gl_transaksi_detail.coa = %s
         AND gl_transaksi.company_CompanyID LIKE %s

@@ -2,8 +2,7 @@ import pymysql
 import csv
 from tqdm import tqdm  # Importing tqdm for the progress bar
 import threading
-from queries import get_vendors_saldo
-from queries import get_transaksi_vendor
+from queries.buku_besar_per_vendor import get_transaksi_vendor,get_vendors_saldo 
 from pool import db_pool
 from uuid import uuid4  
 import subprocess
@@ -12,11 +11,12 @@ from fastapi.responses import FileResponse,JSONResponse
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, APIRouter,BackgroundTasks
-from proccessing import proccessing_data
+from proccessing import buku_besar_per_vendor
 from progress import states
 from request.buku_besar_report_dto import DownloadDto, PreparingDto,ProcessingDto
 from fastapi.middleware.cors import CORSMiddleware
-
+from modules.report_buku_besar.queries.vendor_saat_mencetak import get_saldo_paling_awal,get_transaksi_tanpa_vendor
+from modules.report_buku_besar.dtos.vendor_saat_mencetak_dto import VendorSaatMencetakDto
 
 
 load_dotenv()
@@ -29,12 +29,16 @@ async def lifespan(app: FastAPI):
     baseRoute = APIRouter(prefix='/v1')
 
     @app.post("/preparing", tags=['Reporting'])
-    async def preparing(payload: PreparingDto, background_tasks: BackgroundTasks):
+    async def preparing(payload: VendorSaatMencetakDto, background_tasks: BackgroundTasks):
         # Menambahkan tugas ekspor ke background
         task_id = str(uuid4())
-        background_tasks.add_task(get_vendors_saldo.get_vendors_and_saldo, payload.enititas,payload.coa,payload.start_date,task_id)
 
-        background_tasks.add_task(get_transaksi_vendor.get_transaksi_vendor, payload.enititas,payload.coa,payload.start_date,payload.end_date, task_id)
+        background_tasks.add_task(get_saldo_paling_awal.get_saldo_paling_awal, task_id,payload.coa_number,payload.enititas)
+        background_tasks.add_task(get_transaksi_tanpa_vendor.get_transaksi_tanpa_vendor, task_id,payload.coa_number,payload.enititas,payload.start_date,payload.end_date)
+
+        background_tasks.add_task(get_vendors_saldo.get_vendors_and_saldo, payload.enititas,payload.coa_number,payload.start_date,task_id)
+
+        background_tasks.add_task(get_transaksi_vendor.get_transaksi_vendor, payload.enititas,payload.coa_number,payload.start_date,payload.end_date, task_id)
         
         return {"message": "Preparing", "task_id": task_id}
 
@@ -108,7 +112,7 @@ app.add_middleware(
 )
 
 def run_script(task_id: str, filename: str,preparing_task_id: str):
-    proccessing_data.proccess_data(task_id,filename,preparing_task_id)
+    buku_besar_per_vendor.proccess_data(task_id,filename,preparing_task_id)
 
 # Untuk menjalankan server FastAPI dengan Uvicorn
 # Uvicorn biasanya dijalankan dengan command seperti ini di terminal
