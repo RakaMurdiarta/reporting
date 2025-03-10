@@ -43,7 +43,6 @@ def get_transaksi_tanpa_vendor(task_id, coa, entitas, start_date, end_date):
 
 
 def get_saldo_awal_transaksi_tanpa_vendor(task_id,coa, entitas,start_date):
-    progress = states.read_progress()
     if str(coa)[0] in ['1', '5', '6', '7', '8']:
         saldo_column = "SUM(debit - kredit) AS Saldo"
     else:
@@ -71,11 +70,11 @@ def get_saldo_awal_transaksi_tanpa_vendor(task_id,coa, entitas,start_date):
         def sql_exec():
             cursor.execute(sql, (f"{entitas}%",coa,start_date))
 
-        def csv_inject():
+        def writer_csv_exec():
             writer_csv_helper.writer_csv_helper(chunk_size,csv_file_path,cursor)
         
 
-        preparation_helper.preparation_helper(task_id=task_id,task_name='saldo_awal_transaksi_tanpa_vendor',csv_file_path=csv_file_path,writer_csv_exec=csv_inject, sql_exec=sql_exec)
+        preparation_helper.preparation_helper(task_id=task_id,task_name='saldo_awal_transaksi_tanpa_vendor',csv_file_path=csv_file_path,writer_csv_exec=writer_csv_exec, sql_exec=sql_exec)
     except pymysql.MySQLError as e:
         print(f"Error executing query: {e}")
         return None
