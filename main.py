@@ -34,7 +34,10 @@ async def lifespan(app: FastAPI):
         task_id = str(uuid4())
 
         background_tasks.add_task(get_saldo_paling_awal.get_saldo_paling_awal, task_id,payload.coa_number,payload.enititas)
+
         background_tasks.add_task(get_transaksi_tanpa_vendor.get_transaksi_tanpa_vendor, task_id,payload.coa_number,payload.enititas,payload.start_date,payload.end_date)
+
+        background_tasks.add_task(get_transaksi_tanpa_vendor.get_saldo_awal_transaksi_tanpa_vendor, task_id,payload.coa_number,payload.enititas,payload.start_date)
 
         background_tasks.add_task(get_vendors_saldo.get_vendors_and_saldo, payload.enititas,payload.coa_number,payload.start_date,task_id)
 

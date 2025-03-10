@@ -1,7 +1,7 @@
 from progress import states
 from typing import Callable, Optional
 
-def init_state_progress(task_id, task_name:str, csv_file_path, callback: Callable[[],None],start_date: Optional[str] = None, end_date: Optional[str] = None):
+def preparation_helper(task_id, task_name:str, csv_file_path, writer_csv_exec: Callable[[],None],sql_exec: Callable[[],None],start_date: Optional[str] = None, end_date: Optional[str] = None):
     try:
         progress = states.read_progress()
         if task_id not in progress:
@@ -9,7 +9,8 @@ def init_state_progress(task_id, task_name:str, csv_file_path, callback: Callabl
         progress[task_id]['tasks'][task_name]= 'in_progress'
 
         #callback function writer
-        callback()
+        sql_exec()
+        writer_csv_exec()
 
         progress[task_id]["tasks"][task_name] = "completed"
         progress[task_id]["filenames"][task_name] = csv_file_path
