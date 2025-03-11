@@ -5,7 +5,8 @@ import pymysql
 from pool import db_pool
 from progress import states
 
-def get_transaksi_vendor(entitas, coa, start_date, end_date, task_id):
+
+def buku_besar_transaksi_detail(entitas, coa, start_date, end_date, task_id):
     sql = f"""
     SELECT
         gl_transaksi.company_vendor_id,
@@ -25,19 +26,24 @@ def get_transaksi_vendor(entitas, coa, start_date, end_date, task_id):
         AND gl_transaksi_detail.coa = %s
         AND gl_transaksi.company_CompanyID LIKE %s
     """
-    csv_file_path = f'temp/{task_id}_transaksi.csv'
+    csv_file_path = f"temp/{task_id}_transaksi.csv"
 
     try:
         progress = states.read_progress()
         if task_id not in progress:
-            progress[task_id] = {"status": "started", "filenames": {}, "tasks": {}, 'range_date': {}}
-        progress[task_id]['tasks']["get_transaksi_vendor"]= 'in_progress'
+            progress[task_id] = {
+                "status": "started",
+                "filenames": {},
+                "tasks": {},
+                "range_date": {},
+            }
+        progress[task_id]["tasks"]["get_transaksi_vendor"] = "in_progress"
         conn = db_pool.pool.connection()
         cursor = conn.cursor()
         chunk_size = 6000
         cursor.execute(sql, (start_date, end_date, coa, f"{entitas}%"))
         columns = [desc[0] for desc in cursor.description]
-        with open(csv_file_path, mode='w', newline='', encoding='utf-8') as csv_file:
+        with open(csv_file_path, mode="w", newline="", encoding="utf-8") as csv_file:
             writer = csv.writer(csv_file)
             writer.writerow(columns)
 
@@ -49,9 +55,9 @@ def get_transaksi_vendor(entitas, coa, start_date, end_date, task_id):
         cursor.close()
         conn.close()
         progress[task_id]["tasks"]["get_transaksi_vendor"] = "completed"
-        progress[task_id]["filenames"]['get_transaksi_vendor'] = csv_file_path
-        progress[task_id]["range_date"]['start_date'] = start_date
-        progress[task_id]["range_date"]['end_date'] = end_date
+        progress[task_id]["filenames"]["get_transaksi_vendor"] = csv_file_path
+        progress[task_id]["range_date"]["start_date"] = start_date
+        progress[task_id]["range_date"]["end_date"] = end_date
         if all(status == "completed" for status in progress[task_id]["tasks"].values()):
             progress[task_id]["status"] = "completed"
         print(f"Data exported to {csv_file_path}")
@@ -62,7 +68,7 @@ def get_transaksi_vendor(entitas, coa, start_date, end_date, task_id):
         progress[task_id]["status"] = "failed"
         states.write_progress(progress)
 
-        return None    
+        return None
     finally:
         if conn:
             conn.close()

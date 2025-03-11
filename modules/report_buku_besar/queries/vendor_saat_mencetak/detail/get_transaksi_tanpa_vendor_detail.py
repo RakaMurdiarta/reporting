@@ -2,10 +2,11 @@ import pymysql
 from pool import db_pool
 from progress import states
 import csv
-from utils import preparation_helper,writer_csv_helper
+from utils import preparation_helper, writer_csv_helper
 
-def get_transaksi_tanpa_vendor(task_id, coa, entitas, start_date, end_date):
-    sql= f"""
+
+def transaksi_tanpa_vendor_detail(task_id, coa, entitas, start_date, end_date):
+    sql = f"""
     SELECT *
     FROM gl_transaksi
     JOIN gl_transaksi_detail
@@ -19,19 +20,25 @@ def get_transaksi_tanpa_vendor(task_id, coa, entitas, start_date, end_date):
     ORDER BY gl_transaksi.tanggal_transaksi DESC
     """
 
-    csv_file_path = f'temp/{task_id}_transaksi_tanpa_vendor.csv'
+    csv_file_path = f"temp/{task_id}_transaksi_tanpa_vendor.csv"
     try:
         conn = db_pool.pool.connection()
         cursor = conn.cursor()
         chunk_size = 6000
 
         def sql_exec():
-            cursor.execute(sql, (start_date, end_date, f"{entitas}%",coa))
+            cursor.execute(sql, (start_date, end_date, f"{entitas}%", coa))
 
         def writer_csv():
-            writer_csv_helper.writer_csv_helper(chunk_size,csv_file_path,cursor)
-        
-        preparation_helper.preparation_helper(task_id=task_id,task_name='get_transaksi_tanpa_vendor',csv_file_path=csv_file_path,writer_csv_exec=writer_csv,sql_exec=sql_exec)
+            writer_csv_helper.writer_csv_helper(chunk_size, csv_file_path, cursor)
+
+        preparation_helper.preparation_helper(
+            task_id=task_id,
+            task_name="get_transaksi_tanpa_vendor",
+            csv_file_path=csv_file_path,
+            writer_csv_exec=writer_csv,
+            sql_exec=sql_exec,
+        )
 
     except pymysql.MySQLError as e:
         print(f"Error executing query: {e}")
@@ -42,13 +49,13 @@ def get_transaksi_tanpa_vendor(task_id, coa, entitas, start_date, end_date):
             db_pool.pool.close()
 
 
-def get_saldo_awal_transaksi_tanpa_vendor(task_id,coa, entitas,start_date):
-    if str(coa)[0] in ['1', '5', '6', '7', '8']:
+def get_saldo_awal_transaksi_tanpa_vendor_detail(task_id, coa, entitas, start_date):
+    if str(coa)[0] in ["1", "5", "6", "7", "8"]:
         saldo_column = "SUM(debit - kredit) AS Saldo"
     else:
         saldo_column = "SUM(kredit - debit) AS Saldo"
 
-    sql=f"""
+    sql = f"""
     SELECT
     {saldo_column}
     FROM gl_transaksi
@@ -61,20 +68,25 @@ def get_saldo_awal_transaksi_tanpa_vendor(task_id,coa, entitas,start_date):
         AND gl_transaksi_detail.coa = %s
         AND gl_transaksi.tanggal_transaksi < %s
     """
-    csv_file_path = f'temp/{task_id}_saldo_awal_transaksi_tanpa_vendor.csv'
+    csv_file_path = f"temp/{task_id}_saldo_awal_transaksi_tanpa_vendor.csv"
     try:
         conn = db_pool.pool.connection()
         cursor = conn.cursor()
         chunk_size = 6000
 
         def sql_exec():
-            cursor.execute(sql, (f"{entitas}%",coa,start_date))
+            cursor.execute(sql, (f"{entitas}%", coa, start_date))
 
         def writer_csv_exec():
-            writer_csv_helper.writer_csv_helper(chunk_size,csv_file_path,cursor)
-        
+            writer_csv_helper.writer_csv_helper(chunk_size, csv_file_path, cursor)
 
-        preparation_helper.preparation_helper(task_id=task_id,task_name='saldo_awal_transaksi_tanpa_vendor',csv_file_path=csv_file_path,writer_csv_exec=writer_csv_exec, sql_exec=sql_exec)
+        preparation_helper.preparation_helper(
+            task_id=task_id,
+            task_name="saldo_awal_transaksi_tanpa_vendor",
+            csv_file_path=csv_file_path,
+            writer_csv_exec=writer_csv_exec,
+            sql_exec=sql_exec,
+        )
     except pymysql.MySQLError as e:
         print(f"Error executing query: {e}")
         return None

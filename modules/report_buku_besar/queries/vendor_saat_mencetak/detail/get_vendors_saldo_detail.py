@@ -6,9 +6,9 @@ from pool import db_pool
 from progress import states
 
 
-def get_vendors_and_saldo(entitas, coa, start_date,task_id):
+def get_vendors_and_saldo_detail(entitas, coa, start_date, task_id):
     # Define saldo calculation depending on COA prefix
-    if str(coa)[0] in ['1', '5', '6', '7', '8']:
+    if str(coa)[0] in ["1", "5", "6", "7", "8"]:
         saldo_column = "SUM(debit - kredit) AS Saldo"
     else:
         saldo_column = "SUM(kredit - debit) AS Saldo"
@@ -30,13 +30,18 @@ def get_vendors_and_saldo(entitas, coa, start_date,task_id):
         AND gl_transaksi.tanggal_transaksi < %s
     GROUP BY company.CompanyID, company.Name
     """
-    csv_file_path = f'temp/{task_id}_saldo.csv'
+    csv_file_path = f"temp/{task_id}_saldo.csv"
 
     try:
         progress = states.read_progress()
         if task_id not in progress:
-            progress[task_id] = {"status": "started", "filenames": {}, "tasks": {},'range_date': {}}
-        progress[task_id]['tasks']["get_vendors_and_saldo"]= 'in_progress'
+            progress[task_id] = {
+                "status": "started",
+                "filenames": {},
+                "tasks": {},
+                "range_date": {},
+            }
+        progress[task_id]["tasks"]["get_vendors_and_saldo"] = "in_progress"
         conn = db_pool.pool.connection()
         cursor = conn.cursor()
         chunk_size = 6000
@@ -44,7 +49,7 @@ def get_vendors_and_saldo(entitas, coa, start_date,task_id):
         columns = [desc[0] for desc in cursor.description]
 
         # Open CSV file for writing
-        with open(csv_file_path, mode='w', newline='', encoding='utf-8') as csv_file:
+        with open(csv_file_path, mode="w", newline="", encoding="utf-8") as csv_file:
             writer = csv.writer(csv_file)
             writer.writerow(columns)  # Write the header
 
@@ -57,8 +62,8 @@ def get_vendors_and_saldo(entitas, coa, start_date,task_id):
         cursor.close()
         conn.close()
         progress[task_id]["tasks"]["get_vendors_and_saldo"] = "completed"
-        progress[task_id]["filenames"]['get_vendors_and_saldo'] = csv_file_path
-        progress[task_id]["range_date"]['start_date'] = start_date
+        progress[task_id]["filenames"]["get_vendors_and_saldo"] = csv_file_path
+        progress[task_id]["range_date"]["start_date"] = start_date
         if all(status == "completed" for status in progress[task_id]["tasks"].values()):
             progress[task_id]["status"] = "completed"
         print(f"Data exported to {csv_file_path}")

@@ -5,7 +5,6 @@ import pymysql
 import csv
 from tqdm import tqdm  # Importing tqdm for the progress bar
 import threading
-from queries.buku_besar_per_vendor import get_transaksi_vendor, get_vendors_saldo
 from pool import db_pool
 from uuid import uuid4
 import subprocess
@@ -18,16 +17,18 @@ from progress import states
 from request.buku_besar_report_dto import DownloadDto, PreparingDto, ProcessingDto
 from fastapi.middleware.cors import CORSMiddleware
 from modules.report_buku_besar.queries.vendor_saat_mencetak.detail import (
-    get_saldo_paling_awal,
-    get_transaksi_tanpa_vendor,
+    buku_besar_transaksi_detail,
+    get_transaksi_tanpa_vendor_detail,
+    get_vendors_saldo_detail,
 )
 from modules.report_buku_besar.queries.vendor_saat_mencetak.rekap import (
-    get_transaksi_tanpa_vendor_rekap,
     get_buku_besar_tanpa_vendor_rekap,
+    get_transaksi_tanpa_vendor_rekap,
 )
 from modules.report_buku_besar.dtos.vendor_saat_mencetak_dto import (
     VendorSaatMencetakDto,
 )
+from modules.report_buku_besar.queries.vendor_saat_mencetak import get_saldo_paling_awal
 
 
 @asynccontextmanager
@@ -42,8 +43,14 @@ async def lifespan(app: FastAPI):
     ):
         # Menambahkan tugas ekspor ke background
         task_id = str(uuid4())
+        background_tasks.add_task(
+            get_saldo_paling_awal.get_saldo_paling_awal,
+            task_id,
+            payload.coa_number,
+            payload.enititas,
+        )
 
-        if payload.view == 1:
+        if payload.view == 1:  # rekap
             background_tasks.add_task(
                 get_transaksi_tanpa_vendor_rekap.get_transaksi_tanpa_vendor_rekap,
                 task_id,
@@ -59,16 +66,9 @@ async def lifespan(app: FastAPI):
                 payload.enititas,
                 payload.end_date,
             )
-        elif payload.view == 0:
+        elif payload.view == 0:  # detail
             background_tasks.add_task(
-                get_saldo_paling_awal.get_saldo_paling_awal,
-                task_id,
-                payload.coa_number,
-                payload.enititas,
-            )
-
-            background_tasks.add_task(
-                get_transaksi_tanpa_vendor.get_transaksi_tanpa_vendor,
+                get_transaksi_tanpa_vendor_detail.transaksi_tanpa_vendor_detail,
                 task_id,
                 payload.coa_number,
                 payload.enititas,
@@ -77,7 +77,7 @@ async def lifespan(app: FastAPI):
             )
 
             background_tasks.add_task(
-                get_transaksi_tanpa_vendor.get_saldo_awal_transaksi_tanpa_vendor,
+                get_transaksi_tanpa_vendor_detail.get_saldo_awal_transaksi_tanpa_vendor_detail,
                 task_id,
                 payload.coa_number,
                 payload.enititas,
@@ -85,7 +85,7 @@ async def lifespan(app: FastAPI):
             )
 
             background_tasks.add_task(
-                get_vendors_saldo.get_vendors_and_saldo,
+                get_vendors_saldo_detail.get_vendors_and_saldo_detail,
                 payload.enititas,
                 payload.coa_number,
                 payload.start_date,
@@ -93,7 +93,7 @@ async def lifespan(app: FastAPI):
             )
 
             background_tasks.add_task(
-                get_transaksi_vendor.get_transaksi_vendor,
+                buku_besar_transaksi_detail.buku_besar_transaksi_detail,
                 payload.enititas,
                 payload.coa_number,
                 payload.start_date,
