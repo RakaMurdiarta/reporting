@@ -1,102 +1,166 @@
 from dotenv import load_dotenv
+
 load_dotenv()
 import pymysql
 import csv
 from tqdm import tqdm  # Importing tqdm for the progress bar
 import threading
-from queries.buku_besar_per_vendor import get_transaksi_vendor,get_vendors_saldo 
+from queries.buku_besar_per_vendor import get_transaksi_vendor, get_vendors_saldo
 from pool import db_pool
-from uuid import uuid4  
+from uuid import uuid4
 import subprocess
 import os
-from fastapi.responses import FileResponse,JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, APIRouter,BackgroundTasks
+from fastapi import FastAPI, APIRouter, BackgroundTasks
 from proccessing import buku_besar_per_vendor
 from progress import states
-from request.buku_besar_report_dto import DownloadDto, PreparingDto,ProcessingDto
+from request.buku_besar_report_dto import DownloadDto, PreparingDto, ProcessingDto
 from fastapi.middleware.cors import CORSMiddleware
-from modules.report_buku_besar.queries.vendor_saat_mencetak import get_saldo_paling_awal,get_transaksi_tanpa_vendor
-from modules.report_buku_besar.dtos.vendor_saat_mencetak_dto import VendorSaatMencetakDto
-
+from modules.report_buku_besar.queries.vendor_saat_mencetak.detail import (
+    get_saldo_paling_awal,
+    get_transaksi_tanpa_vendor,
+)
+from modules.report_buku_besar.queries.vendor_saat_mencetak.rekap import (
+    get_transaksi_tanpa_vendor_rekap,
+    get_buku_besar_tanpa_vendor_rekap,
+)
+from modules.report_buku_besar.dtos.vendor_saat_mencetak_dto import (
+    VendorSaatMencetakDto,
+)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
-    #init base route
-    baseRoute = APIRouter(prefix='/v1')
+    # init base route
+    baseRoute = APIRouter(prefix="/v1")
 
-    @app.post("/preparing", tags=['Reporting'])
-    async def preparing(payload: VendorSaatMencetakDto, background_tasks: BackgroundTasks):
+    @app.post("/preparing", tags=["Reporting"])
+    async def preparing(
+        payload: VendorSaatMencetakDto, background_tasks: BackgroundTasks
+    ):
         # Menambahkan tugas ekspor ke background
         task_id = str(uuid4())
 
-        background_tasks.add_task(get_saldo_paling_awal.get_saldo_paling_awal, task_id,payload.coa_number,payload.enititas)
+        if payload.view == 1:
+            background_tasks.add_task(
+                get_transaksi_tanpa_vendor_rekap.get_transaksi_tanpa_vendor_rekap,
+                task_id,
+                payload.coa_number,
+                payload.enititas,
+                payload.end_date,
+            )
 
-        background_tasks.add_task(get_transaksi_tanpa_vendor.get_transaksi_tanpa_vendor, task_id,payload.coa_number,payload.enititas,payload.start_date,payload.end_date)
+            background_tasks.add_task(
+                get_buku_besar_tanpa_vendor_rekap.buku_besar_transaksi_tanpa_vendor,
+                task_id,
+                payload.coa_number,
+                payload.enititas,
+                payload.end_date,
+            )
+        elif payload.view == 0:
+            background_tasks.add_task(
+                get_saldo_paling_awal.get_saldo_paling_awal,
+                task_id,
+                payload.coa_number,
+                payload.enititas,
+            )
 
-        background_tasks.add_task(get_transaksi_tanpa_vendor.get_saldo_awal_transaksi_tanpa_vendor, task_id,payload.coa_number,payload.enititas,payload.start_date)
+            background_tasks.add_task(
+                get_transaksi_tanpa_vendor.get_transaksi_tanpa_vendor,
+                task_id,
+                payload.coa_number,
+                payload.enititas,
+                payload.start_date,
+                payload.end_date,
+            )
 
-        background_tasks.add_task(get_vendors_saldo.get_vendors_and_saldo, payload.enititas,payload.coa_number,payload.start_date,task_id)
+            background_tasks.add_task(
+                get_transaksi_tanpa_vendor.get_saldo_awal_transaksi_tanpa_vendor,
+                task_id,
+                payload.coa_number,
+                payload.enititas,
+                payload.start_date,
+            )
 
-        background_tasks.add_task(get_transaksi_vendor.get_transaksi_vendor, payload.enititas,payload.coa_number,payload.start_date,payload.end_date, task_id)
-        
+            background_tasks.add_task(
+                get_vendors_saldo.get_vendors_and_saldo,
+                payload.enititas,
+                payload.coa_number,
+                payload.start_date,
+                task_id,
+            )
+
+            background_tasks.add_task(
+                get_transaksi_vendor.get_transaksi_vendor,
+                payload.enititas,
+                payload.coa_number,
+                payload.start_date,
+                payload.end_date,
+                task_id,
+            )
+
         return {"message": "Preparing", "task_id": task_id}
 
-    @app.post("/processing",tags=['Reporting'])
-    async def processing(payload: ProcessingDto,background_tasks: BackgroundTasks):
+    @app.post("/processing", tags=["Reporting"])
+    async def processing(payload: ProcessingDto, background_tasks: BackgroundTasks):
         task_id = str(uuid4())
         preparing_state = states.read_progress()
-        if not preparing_state[payload.preparing_task_id]['status'] == 'completed':
-            return JSONResponse(content={'message': 'cannot proccesing the data'}) 
-        
-        range_dates = preparing_state[payload.preparing_task_id]['range_date']
-        start_date = range_dates['start_date']
-        end_date = range_dates['end_date']
+        if not preparing_state[payload.preparing_task_id]["status"] == "completed":
+            return JSONResponse(content={"message": "cannot proccesing the data"})
+
+        range_dates = preparing_state[payload.preparing_task_id]["range_date"]
+        start_date = range_dates["start_date"]
+        end_date = range_dates["end_date"]
         # Menambahkan tugas ekspor ke background
-        expose_name = f'{task_id}_report_buku_besar_{start_date}_{end_date}.xlsx'
-        filename= f'temp/{expose_name}'
-        background_tasks.add_task(run_script, task_id, filename, payload.preparing_task_id)
+        expose_name = f"{task_id}_report_buku_besar_{start_date}_{end_date}.xlsx"
+        filename = f"temp/{expose_name}"
+        background_tasks.add_task(
+            run_script, task_id, filename, payload.preparing_task_id
+        )
 
         return {"message": "Processing", "task_id": task_id, "file_name": expose_name}
 
-
-    @app.get("/download/{file_name}",tags=['Reporting'])
+    @app.get("/download/{file_name}", tags=["Reporting"])
     async def download_file(file_name: str):
         # Tentukan path ke file yang akan didownload
         file_path = os.path.join("temp", file_name)
 
         # Periksa apakah file ada di server
         if os.path.exists(file_path):
-            return FileResponse(file_path, media_type="application/octet-stream", headers={"Content-Disposition": f"attachment; filename={file_name}"})
+            return FileResponse(
+                file_path,
+                media_type="application/octet-stream",
+                headers={"Content-Disposition": f"attachment; filename={file_name}"},
+            )
         else:
             return {"error": "File not found"}
-        
-    @app.get("/processing-status/{task_id}",tags=['Reporting'])
+
+    @app.get("/processing-status/{task_id}", tags=["Reporting"])
     async def checking_status_preparing(task_id: str):
         # Membaca status dari file JSON
         status_data = states.read_proccessing()
-        
+
         if task_id in status_data:
-            return JSONResponse(content={'status': status_data[task_id]['status']})        
+            return JSONResponse(content={"status": status_data[task_id]["status"]})
         else:
             return JSONResponse(content={"message": "Task not found"}, status_code=404)
-        
-    @app.get("/preparing-status/{task_id}",tags=['Reporting'])
+
+    @app.get("/preparing-status/{task_id}", tags=["Reporting"])
     async def checking_status_processing(task_id: str):
         # Membaca status dari file JSON
         status_data = states.read_progress()
-        
+
         if task_id in status_data:
-            return JSONResponse(content={'status': status_data[task_id]['status']})
+            return JSONResponse(content={"status": status_data[task_id]["status"]})
         else:
             return JSONResponse(content={"message": "Task not found"}, status_code=404)
 
-    #register route as wrap parent route
+    # register route as wrap parent route
     app.include_router(baseRoute)
 
-    yield  
+    yield
 
 
 app = FastAPI(lifespan=lifespan)
@@ -113,10 +177,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def run_script(task_id: str, filename: str,preparing_task_id: str):
-    buku_besar_per_vendor.proccess_data(task_id,filename,preparing_task_id)
+
+def run_script(task_id: str, filename: str, preparing_task_id: str):
+    buku_besar_per_vendor.proccess_data(task_id, filename, preparing_task_id)
+
 
 # Untuk menjalankan server FastAPI dengan Uvicorn
 # Uvicorn biasanya dijalankan dengan command seperti ini di terminal
 # uvicorn main:app --reload
-
