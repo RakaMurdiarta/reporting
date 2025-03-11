@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+load_dotenv()
 import pymysql
 import csv
 from tqdm import tqdm  # Importing tqdm for the progress bar
@@ -8,7 +10,6 @@ from uuid import uuid4
 import subprocess
 import os
 from fastapi.responses import FileResponse,JSONResponse
-from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, APIRouter,BackgroundTasks
 from proccessing import buku_besar_per_vendor
@@ -19,11 +20,9 @@ from modules.report_buku_besar.queries.vendor_saat_mencetak import get_saldo_pal
 from modules.report_buku_besar.dtos.vendor_saat_mencetak_dto import VendorSaatMencetakDto
 
 
-load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
 
     #init base route
     baseRoute = APIRouter(prefix='/v1')
