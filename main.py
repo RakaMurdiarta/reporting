@@ -29,6 +29,7 @@ from modules.report_buku_besar.dtos.vendor_saat_mencetak_dto import (
     VendorSaatMencetakDto,
 )
 from modules.report_buku_besar.queries.vendor_saat_mencetak import get_saldo_paling_awal
+from views.states import read_view, write_view
 
 
 @asynccontextmanager
@@ -43,6 +44,9 @@ async def lifespan(app: FastAPI):
     ):
         # Menambahkan tugas ekspor ke background
         task_id = str(uuid4())
+        views = read_view()
+        views[task_id] = payload.view
+
         background_tasks.add_task(
             get_saldo_paling_awal.get_saldo_paling_awal,
             task_id,
@@ -100,7 +104,7 @@ async def lifespan(app: FastAPI):
                 payload.end_date,
                 task_id,
             )
-
+        write_view(views=views)
         return {"message": "Preparing", "task_id": task_id}
 
     @app.post("/processing", tags=["Reporting"])

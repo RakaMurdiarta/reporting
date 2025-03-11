@@ -30,7 +30,7 @@ def get_vendors_and_saldo_detail(entitas, coa, start_date, task_id):
         AND gl_transaksi.tanggal_transaksi < %s
     GROUP BY company.CompanyID, company.Name
     """
-    csv_file_path = f"temp/{task_id}_saldo.csv"
+    csv_file_path = f"temp/{task_id}_get_vendors_and_saldo_detail.csv"
 
     try:
         progress = states.read_progress()
@@ -41,7 +41,7 @@ def get_vendors_and_saldo_detail(entitas, coa, start_date, task_id):
                 "tasks": {},
                 "range_date": {},
             }
-        progress[task_id]["tasks"]["get_vendors_and_saldo"] = "in_progress"
+        progress[task_id]["tasks"]["get_vendors_and_saldo_detail"] = "in_progress"
         conn = db_pool.pool.connection()
         cursor = conn.cursor()
         chunk_size = 6000
@@ -61,8 +61,8 @@ def get_vendors_and_saldo_detail(entitas, coa, start_date, task_id):
 
         cursor.close()
         conn.close()
-        progress[task_id]["tasks"]["get_vendors_and_saldo"] = "completed"
-        progress[task_id]["filenames"]["get_vendors_and_saldo"] = csv_file_path
+        progress[task_id]["tasks"]["get_vendors_and_saldo_detail"] = "completed"
+        progress[task_id]["filenames"]["get_vendors_and_saldo_detail"] = csv_file_path
         progress[task_id]["range_date"]["start_date"] = start_date
         if all(status == "completed" for status in progress[task_id]["tasks"].values()):
             progress[task_id]["status"] = "completed"
@@ -71,7 +71,7 @@ def get_vendors_and_saldo_detail(entitas, coa, start_date, task_id):
 
     except pymysql.MySQLError as e:
         print(f"Error executing query: {e}")
-        progress[task_id]["tasks"]["get_vendors_and_saldo"] = "failed"
+        progress[task_id]["tasks"]["get_vendors_and_saldo_detail"] = "failed"
         progress[task_id]["status"] = "failed"
         return None
     finally:

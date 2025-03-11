@@ -26,7 +26,7 @@ def buku_besar_transaksi_detail(entitas, coa, start_date, end_date, task_id):
         AND gl_transaksi_detail.coa = %s
         AND gl_transaksi.company_CompanyID LIKE %s
     """
-    csv_file_path = f"temp/{task_id}_transaksi.csv"
+    csv_file_path = f"temp/{task_id}_buku_besar_transaksi_detail.csv"
 
     try:
         progress = states.read_progress()
@@ -37,7 +37,7 @@ def buku_besar_transaksi_detail(entitas, coa, start_date, end_date, task_id):
                 "tasks": {},
                 "range_date": {},
             }
-        progress[task_id]["tasks"]["get_transaksi_vendor"] = "in_progress"
+        progress[task_id]["tasks"]["buku_besar_transaksi_detail"] = "in_progress"
         conn = db_pool.pool.connection()
         cursor = conn.cursor()
         chunk_size = 6000
@@ -54,8 +54,8 @@ def buku_besar_transaksi_detail(entitas, coa, start_date, end_date, task_id):
                 writer.writerows(rows)
         cursor.close()
         conn.close()
-        progress[task_id]["tasks"]["get_transaksi_vendor"] = "completed"
-        progress[task_id]["filenames"]["get_transaksi_vendor"] = csv_file_path
+        progress[task_id]["tasks"]["buku_besar_transaksi_detail"] = "completed"
+        progress[task_id]["filenames"]["buku_besar_transaksi_detail"] = csv_file_path
         progress[task_id]["range_date"]["start_date"] = start_date
         progress[task_id]["range_date"]["end_date"] = end_date
         if all(status == "completed" for status in progress[task_id]["tasks"].values()):
@@ -64,7 +64,7 @@ def buku_besar_transaksi_detail(entitas, coa, start_date, end_date, task_id):
         states.write_progress(progress)
     except pymysql.MySQLError as e:
         print(f"Error executing query: {e}")
-        progress[task_id]["tasks"]["get_transaksi_vendor"] = "failed"
+        progress[task_id]["tasks"]["buku_besar_transaksi_detail"] = "failed"
         progress[task_id]["status"] = "failed"
         states.write_progress(progress)
 
