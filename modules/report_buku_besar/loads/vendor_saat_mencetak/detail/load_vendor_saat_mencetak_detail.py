@@ -118,3 +118,4 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         print(f"Error: {e}")
         state_progres[processing_task_id]["status"] = "failed"
         states.write_proccessing(state_progres)
+        raise e
