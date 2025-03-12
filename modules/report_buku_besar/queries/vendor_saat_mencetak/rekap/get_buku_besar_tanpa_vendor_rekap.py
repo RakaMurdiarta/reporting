@@ -8,7 +8,7 @@ from modules.report_buku_besar.queries.vendor_saat_mencetak.constant.index impor
 )
 
 
-def buku_besar_transaksi_tanpa_vendor(task_id, coa, entitas, end_date):
+def buku_besar_transaksi_tanpa_vendor(task_id, coa, entitas, start_date, end_date):
 
     if str(coa)[0] in ["1", "5", "6", "7", "8"]:
         saldo_column = "SUM(debit - kredit) AS Saldo"
@@ -18,6 +18,7 @@ def buku_besar_transaksi_tanpa_vendor(task_id, coa, entitas, end_date):
     sql = f"""
     SELECT
     gl_transaksi.company_vendor_id,
+    company.Name,
     SUM(gl_transaksi_detail.debit) as debit,
     SUM(gl_transaksi_detail.kredit) as kredit,
     {saldo_column}
@@ -61,6 +62,8 @@ def buku_besar_transaksi_tanpa_vendor(task_id, coa, entitas, end_date):
             csv_file_path=csv_file_path,
             writer_csv_exec=writer_csv,
             sql_exec=sql_exec,
+            end_date=end_date,
+            start_date=start_date,
         )
 
     except pymysql.MySQLError as e:

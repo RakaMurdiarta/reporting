@@ -41,6 +41,8 @@ def transaksi_tanpa_vendor_detail(task_id, coa, entitas, start_date, end_date):
             csv_file_path=csv_file_path,
             writer_csv_exec=writer_csv,
             sql_exec=sql_exec,
+            start_date=start_date,
+            end_date=end_date,
         )
 
     except pymysql.MySQLError as e:
@@ -91,6 +93,7 @@ def get_saldo_awal_transaksi_tanpa_vendor_detail(task_id, coa, entitas, start_da
             csv_file_path=csv_file_path,
             writer_csv_exec=writer_csv_exec,
             sql_exec=sql_exec,
+            start_date=start_date,
         )
     except pymysql.MySQLError as e:
         print(f"Error executing query: {e}")

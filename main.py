@@ -32,6 +32,10 @@ from views.states import read_view, write_view
 from modules.report_buku_besar.loads.vendor_saat_mencetak.detail import (
     load_vendor_saat_mencetak_detail,
 )
+from modules.report_buku_besar.loads.vendor_saat_mencetak.rekap import (
+    load_vendor_saat_mencetak_rekap,
+)
+from views import states as view_state
 
 
 @asynccontextmanager
@@ -62,6 +66,7 @@ async def lifespan(app: FastAPI):
                 task_id,
                 payload.coa_number,
                 payload.enititas,
+                payload.start_date,
                 payload.end_date,
             )
 
@@ -70,6 +75,7 @@ async def lifespan(app: FastAPI):
                 task_id,
                 payload.coa_number,
                 payload.enititas,
+                payload.start_date,
                 payload.end_date,
             )
         elif payload.view == 0:  # detail
@@ -113,6 +119,8 @@ async def lifespan(app: FastAPI):
     async def processing(payload: ProcessingDto, background_tasks: BackgroundTasks):
         task_id = str(uuid4())
         preparing_state = states.read_progress()
+        view_state_temp = view_state.read_view()
+
         if not preparing_state[payload.preparing_task_id]["status"] == "completed":
             return JSONResponse(content={"message": "cannot proccesing the data"})
 
@@ -120,10 +128,23 @@ async def lifespan(app: FastAPI):
         start_date = range_dates["start_date"]
         end_date = range_dates["end_date"]
         # Menambahkan tugas ekspor ke background
-        expose_name = f"{task_id}_report_buku_besar_{start_date}_{end_date}.xlsx"
+        __view = view_state_temp[payload.preparing_task_id]
+        if __view == 0:
+            expose_name = (
+                f"{task_id}_report_buku_besar_{start_date}_{end_date}_detail.xlsx"
+            )
+        else:
+            expose_name = (
+                f"{task_id}_report_buku_besar_{start_date}_{end_date}_rekap.xlsx"
+            )
+
         filename = f"temp/{expose_name}"
         background_tasks.add_task(
-            run_script, task_id, payload.preparing_task_id, filename
+            run_script_vendor_saat_mencetak,
+            task_id,
+            payload.preparing_task_id,
+            filename,
+            __view,
         )
 
         return {"message": "Processing", "task_id": task_id, "file_name": expose_name}
@@ -184,10 +205,17 @@ app.add_middleware(
 )
 
 
-def run_script(processing_task_id: str, preparing_task_id: str, filename: str):
-    load_vendor_saat_mencetak_detail.load(
-        processing_task_id, preparing_task_id, filename
-    )
+def run_script_vendor_saat_mencetak(
+    processing_task_id: str, preparing_task_id: str, filename: str, view: int
+):
+    if view == 0:
+        load_vendor_saat_mencetak_detail.load(
+            processing_task_id, preparing_task_id, filename
+        )
+    else:
+        load_vendor_saat_mencetak_rekap.load(
+            preparing_task_id, preparing_task_id, filename
+        )
 
 
 # Untuk menjalankan server FastAPI dengan Uvicorn

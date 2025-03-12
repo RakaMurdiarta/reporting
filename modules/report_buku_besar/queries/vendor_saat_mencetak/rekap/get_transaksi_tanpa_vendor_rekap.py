@@ -8,7 +8,7 @@ from modules.report_buku_besar.queries.vendor_saat_mencetak.constant.index impor
 )
 
 
-def get_transaksi_tanpa_vendor_rekap(task_id, coa, entitas, end_date):
+def get_transaksi_tanpa_vendor_rekap(task_id, coa, entitas, start_date, end_date):
     sql = f"""
     SELECT
         SUM(gl_transaksi_detail.debit) as debit,
@@ -41,6 +41,8 @@ def get_transaksi_tanpa_vendor_rekap(task_id, coa, entitas, end_date):
             csv_file_path=csv_file_path,
             writer_csv_exec=writer_csv,
             sql_exec=sql_exec,
+            end_date=end_date,
+            start_date=start_date,
         )
 
     except pymysql.MySQLError as e:
