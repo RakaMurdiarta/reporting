@@ -3,6 +3,9 @@ from pool import db_pool
 from progress import states
 import csv
 from utils import preparation_helper, writer_csv_helper
+from modules.report_buku_besar.queries.vendor_saat_mencetak.constant.index import (
+    constants,
+)
 
 
 def transaksi_tanpa_vendor_detail(task_id, coa, entitas, start_date, end_date):
@@ -20,7 +23,7 @@ def transaksi_tanpa_vendor_detail(task_id, coa, entitas, start_date, end_date):
     ORDER BY gl_transaksi.tanggal_transaksi DESC
     """
 
-    csv_file_path = f"temp/{task_id}_transaksi_tanpa_vendor.csv"
+    csv_file_path = f"temp/{task_id}_{constants.transaksi_tanpa_vendor_detail}.csv"
     try:
         conn = db_pool.pool.connection()
         cursor = conn.cursor()
@@ -34,7 +37,7 @@ def transaksi_tanpa_vendor_detail(task_id, coa, entitas, start_date, end_date):
 
         preparation_helper.preparation_helper(
             task_id=task_id,
-            task_name="get_transaksi_tanpa_vendor",
+            task_name=constants.transaksi_tanpa_vendor_detail,
             csv_file_path=csv_file_path,
             writer_csv_exec=writer_csv,
             sql_exec=sql_exec,
@@ -68,7 +71,9 @@ def get_saldo_awal_transaksi_tanpa_vendor_detail(task_id, coa, entitas, start_da
         AND gl_transaksi_detail.coa = %s
         AND gl_transaksi.tanggal_transaksi < %s
     """
-    csv_file_path = f"temp/{task_id}_saldo_awal_transaksi_tanpa_vendor.csv"
+    csv_file_path = (
+        f"temp/{task_id}_{constants.get_saldo_awal_transaksi_tanpa_vendor_detail}.csv"
+    )
     try:
         conn = db_pool.pool.connection()
         cursor = conn.cursor()
@@ -82,7 +87,7 @@ def get_saldo_awal_transaksi_tanpa_vendor_detail(task_id, coa, entitas, start_da
 
         preparation_helper.preparation_helper(
             task_id=task_id,
-            task_name="saldo_awal_transaksi_tanpa_vendor",
+            task_name=constants.get_saldo_awal_transaksi_tanpa_vendor_detail,
             csv_file_path=csv_file_path,
             writer_csv_exec=writer_csv_exec,
             sql_exec=sql_exec,

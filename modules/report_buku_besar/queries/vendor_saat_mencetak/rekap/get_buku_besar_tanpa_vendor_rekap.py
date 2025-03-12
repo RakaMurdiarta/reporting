@@ -3,6 +3,9 @@ from pool import db_pool
 from progress import states
 import csv
 from utils import preparation_helper, writer_csv_helper
+from modules.report_buku_besar.queries.vendor_saat_mencetak.constant.index import (
+    constants,
+)
 
 
 def buku_besar_transaksi_tanpa_vendor(task_id, coa, entitas, end_date):
@@ -31,7 +34,9 @@ def buku_besar_transaksi_tanpa_vendor(task_id, coa, entitas, end_date):
     GROUP BY gl_transaksi.company_vendor_id
     """
 
-    csv_file_path = f"temp/{task_id}_buku_besar_tanpa_vendor_rekap.csv"
+    csv_file_path = (
+        f"temp/{task_id}_{constants.buku_besar_transaksi_tanpa_vendor_rekap}.csv"
+    )
     try:
         conn = db_pool.pool.connection()
         cursor = conn.cursor()
@@ -52,7 +57,7 @@ def buku_besar_transaksi_tanpa_vendor(task_id, coa, entitas, end_date):
 
         preparation_helper.preparation_helper(
             task_id=task_id,
-            task_name="buku_besar_tanpa_vendor_rekap",
+            task_name=constants.buku_besar_transaksi_tanpa_vendor_rekap,
             csv_file_path=csv_file_path,
             writer_csv_exec=writer_csv,
             sql_exec=sql_exec,
