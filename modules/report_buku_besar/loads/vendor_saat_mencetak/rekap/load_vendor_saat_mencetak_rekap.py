@@ -58,9 +58,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
     ws.write("D8", "Saldo", header_style)
 
     # Merge and apply custom center-aligned formatting with border
-    ws.merge_range(
-        "A3:D3", "Buku Besar Konsolidasi Tampil Per Vendor TJS Rekap", center_merged
-    )
+    ws.merge_range("A3:D3", "Buku Besar Tampil Per Vendor TJS Rekap", center_merged)
     ws.merge_range("A4:D4", f"Periode : {start_date} - {end_date}", center_merged)
 
     row = 8
@@ -76,7 +74,6 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         ws.write(row, 3, data_row["Saldo"], border)
         row += 1
 
-    # Apply border to columns
     for col in range(4):  # Apply border to columns A, B, C, D
         ws.set_column(col, col, 20)  # Set minimum width
         ws.autofit()
