@@ -1,15 +1,46 @@
-from openpyxl import Workbook
-from openpyxl.styles import Border, Side, Font, Alignment
 from modules.report_buku_besar.processing.vendor_saat_mencetak.rekap import (
     transform_vendor_saat_mencetak_rekap,
 )
 from progress import states
+import xlsxwriter
 
 
 def load(processing_task_id: str, preparing_task_id: str, filename: str):
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Report"
+    # Create a workbook and add a worksheet
+    wb = xlsxwriter.Workbook(filename)
+    ws = wb.add_worksheet("Report")
+
+    # Define some formats
+    bold = wb.add_format({"bold": True})
+    center = wb.add_format({"align": "center", "valign": "vcenter"})
+    border = wb.add_format(
+        {
+            "border": 1,
+        }
+    )  # Border format
+
+    # Adding a custom style with bold, center alignment, and border
+    center_merged = wb.add_format(
+        {
+            "bold": True,
+            "align": "center",
+            "valign": "vcenter",
+            "text_wrap": True,
+            "font_size": 18,
+        }
+    )
+
+    # Adding a style for the header row with background color and bold text
+    header_style = wb.add_format(
+        {
+            "bold": True,
+            "align": "center",
+            "valign": "vcenter",
+            "bg_color": "#A9D08E",  # Light green background
+            "border": 1,
+        }
+    )
+
     state_progres = states.read_proccessing()
     preparing_state = states.read_progress()
     state_progres[processing_task_id] = {"status": "started"}
@@ -20,49 +51,33 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
     start_date = range_dates["start_date"]
     end_date = range_dates["end_date"]
 
-    # Set header
-    ws["A8"] = "Vendor"
-    ws["B8"] = "Debet"
-    ws["C8"] = "Kredit"
-    ws["D8"] = "Saldo"
+    # Set header with bold text, alignment, background color, and border
+    ws.write("A8", "Vendor", header_style)
+    ws.write("B8", "Debet", header_style)
+    ws.write("C8", "Kredit", header_style)
+    ws.write("D8", "Saldo", header_style)
 
-    # Define border style
-    thin_border = Border(
-        left=Side(style="thin"),
-        right=Side(style="thin"),
-        top=Side(style="thin"),
-        bottom=Side(style="thin"),
+    # Merge and apply custom center-aligned formatting with border
+    ws.merge_range(
+        "A3:D3", "Buku Besar Konsolidasi Tampil Per Vendor TJS Rekap", center_merged
     )
+    ws.merge_range("A4:D4", f"Periode : {start_date} - {end_date}", center_merged)
 
-    row = 9  # Start row from
-    sum = 0
-
+    row = 8
     buku_besar_transform_rekap = transform_vendor_saat_mencetak_rekap.transform(
         preparing_task_id
     )
-    ws.merge_cells("A3:D3")
-    ws["A3"] = "Buku Besar Konsolidasi Tampil Per Vendor TJS Rekap"
-    ws["A3"].font = Font(size=18, bold=True)
-    ws["A3"].alignment = Alignment(horizontal="center", vertical="center")
 
-    ws["C4"] = f"Periode : {start_date} - {end_date}"
-    ws["C4"].alignment = Alignment(horizontal="center", vertical="center")
-    ws["C4"].font = Font(size=14, bold=True)
-
-    # Menulis data ke worksheet
+    # Write data to worksheet with borders and a default font style
     for index, data_row in buku_besar_transform_rekap.iterrows():
-        ws[f"A{row}"] = data_row["Name"]
-        ws[f"B{row}"] = data_row["debit"]
-        ws[f"C{row}"] = data_row["kredit"]
-        ws[f"D{row}"] = data_row["Saldo"]
-        for col in ["A", "B", "C", "D"]:
-            cell = ws[f"{col}{row}"]
-            cell.border = thin_border
+        ws.write(row, 0, data_row["Name"], border)
+        ws.write(row, 1, data_row["debit"], border)
+        ws.write(row, 2, data_row["kredit"], border)
+        ws.write(row, 3, data_row["Saldo"], border)
         row += 1
-    header_cells = ws["A8:D8"]
-    for cell in header_cells[0]:
-        cell.font = Font(bold=True)
-        cell.alignment = Alignment(horizontal="center")
-        cell.border = thin_border
 
-    wb.save(f"{filename}")
+    # Apply border to columns
+    for col in range(4):  # Apply border to columns A, B, C, D
+        ws.set_column(col, col, 20)  # Set minimum width
+        ws.autofit()
+    wb.close()
