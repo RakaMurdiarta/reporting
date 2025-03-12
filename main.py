@@ -29,6 +29,9 @@ from modules.report_buku_besar.dtos.vendor_saat_mencetak_dto import (
 )
 from modules.report_buku_besar.queries.vendor_saat_mencetak import get_saldo_paling_awal
 from views.states import read_view, write_view
+from modules.report_buku_besar.loads.vendor_saat_mencetak.detail import (
+    load_vendor_saat_mencetak_detail,
+)
 
 
 @asynccontextmanager
@@ -120,7 +123,7 @@ async def lifespan(app: FastAPI):
         expose_name = f"{task_id}_report_buku_besar_{start_date}_{end_date}.xlsx"
         filename = f"temp/{expose_name}"
         background_tasks.add_task(
-            run_script, task_id, filename, payload.preparing_task_id
+            run_script, task_id, payload.preparing_task_id, filename
         )
 
         return {"message": "Processing", "task_id": task_id, "file_name": expose_name}
@@ -181,8 +184,10 @@ app.add_middleware(
 )
 
 
-def run_script(task_id: str, filename: str, preparing_task_id: str):
-    buku_besar_per_vendor.proccess_data(task_id, filename, preparing_task_id)
+def run_script(processing_task_id: str, preparing_task_id: str, filename: str):
+    load_vendor_saat_mencetak_detail.load(
+        processing_task_id, preparing_task_id, filename
+    )
 
 
 # Untuk menjalankan server FastAPI dengan Uvicorn

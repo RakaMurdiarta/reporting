@@ -15,7 +15,6 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         states.write_proccessing(state_progres)
         state_progres[processing_task_id] = {"status": "process"}
         states.write_proccessing(state_progres)
-
         range_dates = preparing_state[preparing_task_id]["range_date"]
         start_date = range_dates["start_date"]
         end_date = range_dates["end_date"]
