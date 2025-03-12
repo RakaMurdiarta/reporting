@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 load_dotenv()
 import pymysql
 import csv
-from tqdm import tqdm  # Importing tqdm for the progress bar
 import threading
 from pool import db_pool
 from uuid import uuid4

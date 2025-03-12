@@ -1,78 +1,25 @@
-import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment
 from progress import states
-from modules.report_buku_besar.queries.vendor_saat_mencetak.constant.index import (
-    constants,
+from modules.report_buku_besar.processing.vendor_saat_mencetak.detail import (
+    transform_vendor_saat_mencetak_detail,
 )
 
 
-def proccess_data(task_id, filename: str, preparing_task_id: str):
+def load(processing_task_id: str, preparing_task_id: str, filename: str):
     try:
         state_progres = states.read_proccessing()
         preparing_state = states.read_progress()
-        state_progres[task_id] = {"status": "started"}
 
+        state_progres[processing_task_id] = {"status": "started"}
         states.write_proccessing(state_progres)
-        df_saldo = pd.read_csv(
-            preparing_state[preparing_task_id]["filenames"][
-                constants.get_vendors_and_saldo_detail
-            ]
-        )
-        df_transaksi = pd.read_csv(
-            preparing_state[preparing_task_id]["filenames"][
-                constants.buku_besar_transaksi_detail
-            ]
-        )
-
-        # Menggabungkan data
-        merged_df = pd.merge(
-            df_transaksi,
-            df_saldo,
-            left_on="company_vendor_id",
-            right_on="CompanyID",
-            how="inner",
-        )
-
-        # Menyiapkan data untuk diekspor
-        db_export = merged_df[
-            [
-                "CompanyID",
-                "tanggal_transaksi",
-                "no_gl_transaksi",
-                "keterangan",
-                "debit",
-                "kredit",
-                "Saldo",
-                "coa_prefix",
-                "coa",
-                "Name",
-            ]
-        ]
-
-        # Mengelompokkan berdasarkan CompanyID
-        grouped_df = db_export.groupby("CompanyID")[
-            [
-                "debit",
-                "kredit",
-                "tanggal_transaksi",
-                "no_gl_transaksi",
-                "keterangan",
-                "coa_prefix",
-                "Saldo",
-                "coa",
-                "Name",
-            ]
-        ].apply(lambda x: x.reset_index(drop=True))
-
-        state_progres[task_id] = {"status": "process"}
+        state_progres[processing_task_id] = {"status": "process"}
         states.write_proccessing(state_progres)
 
         range_dates = preparing_state[preparing_task_id]["range_date"]
         start_date = range_dates["start_date"]
         end_date = range_dates["end_date"]
 
-        # Menulis ke Excel menggunakan openpyxl
         wb = Workbook()
         ws = wb.active
         ws.title = "Report"
@@ -97,6 +44,10 @@ def proccess_data(task_id, filename: str, preparing_task_id: str):
         # Menulis data ke sheet dengan penyesuaian layout
         row = 9  # Mulai dari row 9
         sum = 0
+
+        # call transform data
+        grouped_df = transform_vendor_saat_mencetak_detail.transform(preparing_task_id)
+
         for company_id, group in grouped_df.groupby(level=0):
             name = group.iloc[0]["Name"]
             ws[f"A{row}"] = name
@@ -153,9 +104,9 @@ def proccess_data(task_id, filename: str, preparing_task_id: str):
         # Menyimpan file Excel
         wb.save(f"{filename}")
         print("Data has been processed and saved.")
-        state_progres[task_id]["status"] = "completed"
+        state_progres[processing_task_id]["status"] = "completed"
         states.write_proccessing(state_progres)
     except Exception as e:
         print(f"Error: {e}")
-        state_progres[task_id]["status"] = "failed"
+        state_progres[processing_task_id]["status"] = "failed"
         states.write_proccessing(state_progres)
