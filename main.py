@@ -44,7 +44,9 @@ async def lifespan(app: FastAPI):
     # init base route
     baseRoute = APIRouter(prefix="/v1")
 
-    @app.post("/preparing", tags=["Reporting"])
+    @app.post(
+        "/vendor_saat_mencetak/preparing", tags=["Vendor Saat Mencetak Reporting"]
+    )
     async def preparing(
         payload: VendorSaatMencetakDto, background_tasks: BackgroundTasks
     ):
@@ -115,7 +117,9 @@ async def lifespan(app: FastAPI):
         write_view(views=views)
         return {"message": "Preparing", "task_id": task_id}
 
-    @app.post("/processing", tags=["Reporting"])
+    @app.post(
+        "/vendor_saat_mencetak/processing", tags=["Vendor Saat Mencetak Reporting"]
+    )
     async def processing(payload: ProcessingDto, background_tasks: BackgroundTasks):
         task_id = str(uuid4())
         preparing_state = states.read_progress()
@@ -149,7 +153,7 @@ async def lifespan(app: FastAPI):
 
         return {"message": "Processing", "task_id": task_id, "file_name": expose_name}
 
-    @app.get("/download/{file_name}", tags=["Reporting"])
+    @app.get("/download/{file_name}", tags=["Download"])
     async def download_file(file_name: str):
         # Tentukan path ke file yang akan didownload
         file_path = os.path.join("temp", file_name)
@@ -164,7 +168,7 @@ async def lifespan(app: FastAPI):
         else:
             return {"error": "File not found"}
 
-    @app.get("/processing-status/{task_id}", tags=["Reporting"])
+    @app.get("/processing-status/{task_id}", tags=["Status"])
     async def checking_status_preparing(task_id: str):
         # Membaca status dari file JSON
         status_data = states.read_proccessing()
@@ -174,7 +178,7 @@ async def lifespan(app: FastAPI):
         else:
             return JSONResponse(content={"message": "Task not found"}, status_code=404)
 
-    @app.get("/preparing-status/{task_id}", tags=["Reporting"])
+    @app.get("/preparing-status/{task_id}", tags=["Status"])
     async def checking_status_processing(task_id: str):
         # Membaca status dari file JSON
         status_data = states.read_progress()
