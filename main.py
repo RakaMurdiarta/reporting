@@ -42,6 +42,12 @@ from modules.report_buku_besar.queries.proyek_pada_vendor.get_proyek_by_vendor i
 from modules.report_buku_besar.queries.proyek_pada_vendor.get_proyek_by_vendor_transaksi import (
     get_proyek_by_vendor_transaksi,
 )
+from modules.report_buku_besar.processing.proyek_pada_vendor.transform_proyek_pada_vendor import (
+    transform,
+)
+from modules.report_buku_besar.loads.proyek_pada_vendor.load_proyek_pada_vendor import (
+    load as load_proyek_pada_vendor,
+)
 
 
 @asynccontextmanager
@@ -185,6 +191,34 @@ async def lifespan(app: FastAPI):
             )
 
         background_tasks.add_task(in_order_exec)
+        return {"message": "Preparing", "task_id": task_id}
+
+    @app.post("/proyek_pada_vendor/processing", tags=["Proyek Pada Vendor"])
+    async def processing_proyek_pada_vendor(
+        payload: ProcessingDto, background_tasks: BackgroundTasks
+    ):
+        task_id = str(uuid4())
+
+        preparing_state = states.read_progress()
+
+        if preparing_state[payload.preparing_task_id]["status"] != "completed":
+            return JSONResponse(content={"message": "cannot proccesing the data"})
+
+        range_dates = preparing_state[payload.preparing_task_id]["range_date"]
+        start_date = range_dates["start_date"]
+        end_date = range_dates["end_date"]
+
+        filename = (
+            f"temp/{task_id}_{start_date}_{end_date}_report_proyek_pada_vendor.xlsx"
+        )
+
+        background_tasks.add_task(
+            run_script_proyek_pada_vendor,
+            task_id,
+            payload.preparing_task_id,
+            filename,
+        )
+        return {"message": "Processing", "task_id": task_id}
 
     @app.get("/download/{file_name}", tags=["Download"])
     async def download_file(file_name: str):
@@ -253,6 +287,12 @@ def run_script_vendor_saat_mencetak(
         load_vendor_saat_mencetak_rekap.load(
             preparing_task_id, preparing_task_id, filename
         )
+
+
+def run_script_proyek_pada_vendor(
+    processing_task_id: str, preparing_task_id: str, filename: str
+):
+    load_proyek_pada_vendor(processing_task_id, preparing_task_id, filename)
 
 
 # Untuk menjalankan server FastAPI dengan Uvicorn

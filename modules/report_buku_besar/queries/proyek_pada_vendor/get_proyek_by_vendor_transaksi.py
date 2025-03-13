@@ -13,10 +13,6 @@ def get_proyek_by_vendor_transaksi(
     task_id: str, coa_number: str, entitas: str, start_date: str, end_date: str
 ):
     progress = states.read_progress()
-    # if str(coa_number)[0] in ["1", "5", "6", "7", "8"]:
-    #     saldo_column = "SUM(debit - kredit) AS Saldo"
-    # else:
-    #     saldo_column = "SUM(kredit - debit) AS Saldo"
 
     progress[task_id]["coa_number"] = coa_number
     states.write_progress(progress)
@@ -68,7 +64,7 @@ def get_proyek_by_vendor_transaksi(
 
         preparation_helper.preparation_helper(
             task_id=task_id,
-            task_name=constants.get_company_vendors_proyek_pada_vendor,
+            task_name=constants.get_proyek_by_vendor_transaksi,
             csv_file_path=csv_file_path,
             writer_csv_exec=writer_csv,
             sql_exec=sql_exec,
