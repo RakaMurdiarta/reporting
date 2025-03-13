@@ -35,6 +35,13 @@ from modules.report_buku_besar.loads.vendor_saat_mencetak.rekap import (
     load_vendor_saat_mencetak_rekap,
 )
 from views import states as view_state
+from modules.report_buku_besar.dtos.proyek_pada_vendor_dto import ProyekPadaVendorDto
+from modules.report_buku_besar.queries.proyek_pada_vendor.get_proyek_by_vendor import (
+    get_proyek_by_vendor,
+)
+from modules.report_buku_besar.queries.proyek_pada_vendor.get_proyek_by_vendor_transaksi import (
+    get_proyek_by_vendor_transaksi,
+)
 
 
 @asynccontextmanager
@@ -46,7 +53,7 @@ async def lifespan(app: FastAPI):
     @app.post(
         "/vendor_saat_mencetak/preparing", tags=["Vendor Saat Mencetak Reporting"]
     )
-    async def preparing(
+    async def preparing_vendor_saat_mencetak(
         payload: VendorSaatMencetakDto, background_tasks: BackgroundTasks
     ):
         # Menambahkan tugas ekspor ke background
@@ -119,12 +126,14 @@ async def lifespan(app: FastAPI):
     @app.post(
         "/vendor_saat_mencetak/processing", tags=["Vendor Saat Mencetak Reporting"]
     )
-    async def processing(payload: ProcessingDto, background_tasks: BackgroundTasks):
+    async def processing_vendor_saat_mencetak(
+        payload: ProcessingDto, background_tasks: BackgroundTasks
+    ):
         task_id = str(uuid4())
         preparing_state = states.read_progress()
         view_state_temp = view_state.read_view()
 
-        if not preparing_state[payload.preparing_task_id]["status"] == "completed":
+        if preparing_state[payload.preparing_task_id]["status"] != "completed":
             return JSONResponse(content={"message": "cannot proccesing the data"})
 
         range_dates = preparing_state[payload.preparing_task_id]["range_date"]
@@ -151,6 +160,31 @@ async def lifespan(app: FastAPI):
         )
 
         return {"message": "Processing", "task_id": task_id, "file_name": expose_name}
+
+    @app.post("/proyek_pada_vendor/preparing", tags=["Proyek Pada Vendor"])
+    async def preparing_proyek_pada_vendor(
+        payload: ProyekPadaVendorDto, background_tasks: BackgroundTasks
+    ):
+
+        task_id = str(uuid4())
+
+        def in_order_exec():
+            get_proyek_by_vendor(
+                task_id,
+                payload.coa_number,
+                payload.enititas,
+                payload.start_date,
+                payload.end_date,
+            )
+            get_proyek_by_vendor_transaksi(
+                task_id,
+                payload.coa_number,
+                payload.enititas,
+                payload.start_date,
+                payload.end_date,
+            )
+
+        background_tasks.add_task(in_order_exec)
 
     @app.get("/download/{file_name}", tags=["Download"])
     async def download_file(file_name: str):
