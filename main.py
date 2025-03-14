@@ -74,6 +74,10 @@ from modules.report_buku_besar.loads.proyek_saat_mencetak.detail import (
     load_proyek_saat_mencetak_detail,
 )
 
+from modules.report_buku_besar.loads.proyek_saat_mencetak.rekap import (
+    load_proyek_saat_mencetak_rekap,
+)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -317,16 +321,14 @@ async def lifespan(app: FastAPI):
         start_date = range_dates["start_date"]
         end_date = range_dates["end_date"]
 
-        filename = (
-            f"temp/{task_id}_{start_date}_{end_date}_report_proyek_saat_mencetak.xlsx"
-        )
-
         __view = view_state_temp[payload.preparing_task_id]
 
         if __view == 0:
             expose_name = f"{task_id}_report_buku_besar_proyek_saat_mencetak_{start_date}_{end_date}_detail.xlsx"
         else:
             expose_name = f"{task_id}_report_buku_besar_proyek_saat_mencetak_{start_date}_{end_date}_rekap.xlsx"
+
+        filename = f"temp/{expose_name}"
 
         background_tasks.add_task(
             run_script_proyek_saat_mencetak,
@@ -418,6 +420,10 @@ def run_script_proyek_saat_mencetak(
 ):
     if view == 0:
         load_proyek_saat_mencetak_detail.load(
+            processing_task_id, preparing_task_id, filename
+        )
+    else:
+        load_proyek_saat_mencetak_rekap.load(
             processing_task_id, preparing_task_id, filename
         )
 
