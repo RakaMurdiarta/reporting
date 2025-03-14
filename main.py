@@ -67,6 +67,12 @@ from modules.report_buku_besar.queries.proyek_saat_mencetak.detail.get_transaksi
 from modules.report_buku_besar.queries.proyek_saat_mencetak.detail.get_saldo_awal_buku_besar_per_proyek_detail import (
     get_saldo_awal_buku_besar_per_proyek_detail,
 )
+from modules.report_buku_besar.processing.proyek_saat_mencetak.detail.transform_report_proyek_saat_mencetak_detail import (
+    transform,
+)
+from modules.report_buku_besar.loads.proyek_saat_mencetak.detail import (
+    load_proyek_saat_mencetak_detail,
+)
 
 
 @asynccontextmanager
@@ -245,6 +251,8 @@ async def lifespan(app: FastAPI):
     ):
         try:
             task_id = str(uuid4())
+            views = read_view()
+            views[task_id] = payload.view
             get_coa_detail_saldo(task_id, payload.coa_number, payload.enititas)
 
             def in_order_exec():
@@ -282,6 +290,8 @@ async def lifespan(app: FastAPI):
                     payload.start_date,
                     payload.end_date,
                 )
+
+            write_view(views=views)
             return JSONResponse(
                 content={"message": "Preparing", "task_id": task_id}, status_code=200
             )
@@ -290,6 +300,43 @@ async def lifespan(app: FastAPI):
             return JSONResponse(
                 content={"message": "Something went wrong"}, status_code=400
             )
+
+    @app.post("/proyek_saat_mencetak/processing", tags=["Proyek Saat Mencetak"])
+    async def processing_proyek_saat_mencetak(
+        payload: ProcessingDto, background_tasks: BackgroundTasks
+    ):
+        task_id = str(uuid4())
+
+        preparing_state = states.read_progress()
+        view_state_temp = view_state.read_view()
+
+        if preparing_state[payload.preparing_task_id]["status"] != "completed":
+            return JSONResponse(content={"message": "cannot proccesing the data"})
+
+        range_dates = preparing_state[payload.preparing_task_id]["range_date"]
+        start_date = range_dates["start_date"]
+        end_date = range_dates["end_date"]
+
+        filename = (
+            f"temp/{task_id}_{start_date}_{end_date}_report_proyek_saat_mencetak.xlsx"
+        )
+
+        __view = view_state_temp[payload.preparing_task_id]
+
+        if __view == 0:
+            expose_name = f"{task_id}_report_buku_besar_proyek_saat_mencetak_{start_date}_{end_date}_detail.xlsx"
+        else:
+            expose_name = f"{task_id}_report_buku_besar_proyek_saat_mencetak_{start_date}_{end_date}_rekap.xlsx"
+
+        background_tasks.add_task(
+            run_script_proyek_saat_mencetak,
+            task_id,
+            payload.preparing_task_id,
+            filename,
+            __view,
+        )
+
+        return {"message": "Processing", "task_id": task_id, "file_name": expose_name}
 
     @app.get("/download/{file_name}", tags=["Download"])
     async def download_file(file_name: str):
@@ -364,6 +411,15 @@ def run_script_proyek_pada_vendor(
     processing_task_id: str, preparing_task_id: str, filename: str
 ):
     load_proyek_pada_vendor(processing_task_id, preparing_task_id, filename)
+
+
+def run_script_proyek_saat_mencetak(
+    processing_task_id: str, preparing_task_id: str, filename: str, view: int
+):
+    if view == 0:
+        load_proyek_saat_mencetak_detail.load(
+            processing_task_id, preparing_task_id, filename
+        )
 
 
 # Untuk menjalankan server FastAPI dengan Uvicorn

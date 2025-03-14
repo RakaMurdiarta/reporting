@@ -45,6 +45,7 @@ def get_coa_detail_saldo(task_id: str, coa_number: str, entitas: str):
         coa_label_result = cursor.fetchall()
         for row in coa_label_result:
             store[task_id]["coa_label"] = row["nama_coa"]
+            store[task_id]["coa_prefix"] = coa_number[0]
 
         storage_coa.write_coa_detail_saldo(store)
         cursor.close()
