@@ -58,6 +58,15 @@ from modules.report_buku_besar.dtos.proyek_saat_mencetak_dto import (
 from modules.report_buku_besar.queries.proyek_saat_mencetak.detail.get_poject_by_entitas import (
     get_project_by_entitas,
 )
+from modules.report_buku_besar.queries.proyek_saat_mencetak.rekap.get_transaksi_rekap_by_projects import (
+    get_transaksi_rekap_by_projects,
+)
+from modules.report_buku_besar.queries.proyek_saat_mencetak.detail.get_transaksi_detail_by_project import (
+    get_transaksi_detail_by_project,
+)
+from modules.report_buku_besar.queries.proyek_saat_mencetak.detail.get_saldo_awal_buku_besar_per_proyek_detail import (
+    get_saldo_awal_buku_besar_per_proyek_detail,
+)
 
 
 @asynccontextmanager
@@ -238,14 +247,41 @@ async def lifespan(app: FastAPI):
             task_id = str(uuid4())
             get_coa_detail_saldo(task_id, payload.coa_number, payload.enititas)
 
-            background_tasks.add_task(
-                get_project_by_entitas,
-                task_id,
-                payload.coa_number,
-                payload.enititas,
-                payload.start_date,
-                payload.end_date,
-            )
+            def in_order_exec():
+                get_project_by_entitas(
+                    task_id,
+                    payload.coa_number,
+                    payload.enititas,
+                    payload.start_date,
+                    payload.end_date,
+                )
+                get_transaksi_detail_by_project(
+                    task_id,
+                    payload.coa_number,
+                    payload.enititas,
+                    payload.start_date,
+                    payload.end_date,
+                )
+
+            if payload.view == 0:
+                background_tasks.add_task(in_order_exec)
+                background_tasks.add_task(
+                    get_saldo_awal_buku_besar_per_proyek_detail,
+                    task_id,
+                    payload.coa_number,
+                    payload.enititas,
+                    payload.start_date,
+                    payload.end_date,
+                )
+            else:
+                background_tasks.add_task(
+                    get_transaksi_rekap_by_projects,
+                    task_id,
+                    payload.coa_number,
+                    payload.enititas,
+                    payload.start_date,
+                    payload.end_date,
+                )
             return JSONResponse(
                 content={"message": "Preparing", "task_id": task_id}, status_code=200
             )

@@ -7,3 +7,4 @@ class ProyekSaatMencetakDto(BaseModel):
     coa_number: str
     coa_label: str
     end_date: str
+    view: int
