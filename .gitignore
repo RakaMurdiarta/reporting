@@ -6,3 +6,5 @@ progress.json
 .env
 proccessing.json
 temp/*
+venv
+venv/*

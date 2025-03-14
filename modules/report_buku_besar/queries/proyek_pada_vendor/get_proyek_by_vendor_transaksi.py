@@ -46,8 +46,8 @@ def get_proyek_by_vendor_transaksi(
         FROM 	
             gl_transaksi
             INNER JOIN gl_transaksi_detail ON gl_transaksi.id = gl_transaksi_detail.transaksi_id
-            INNER JOIN projects ON projects.ProjectID = gl_transaksi.project_ProjectID
-            INNER JOIN company ON gl_transaksi.company_vendor_id = company.CompanyID
+            LEFT JOIN projects ON projects.ProjectID = gl_transaksi.project_ProjectID
+            LEFT JOIN company ON gl_transaksi.company_vendor_id = company.CompanyID
         WHERE gl_transaksi.company_CompanyID like %s
             AND gl_transaksi.status_lvl_1 = 1
             AND gl_transaksi.company_vendor_id IN ({vendor_ids_str})

@@ -49,6 +49,16 @@ from modules.report_buku_besar.loads.proyek_pada_vendor.load_proyek_pada_vendor 
     load as load_proyek_pada_vendor,
 )
 
+from modules.report_buku_besar.queries.proyek_saat_mencetak.get_coa_detail_saldo import (
+    get_coa_detail_saldo,
+)
+from modules.report_buku_besar.dtos.proyek_saat_mencetak_dto import (
+    ProyekSaatMencetakDto,
+)
+from modules.report_buku_besar.queries.proyek_saat_mencetak.detail.get_poject_by_entitas import (
+    get_project_by_entitas,
+)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -219,6 +229,31 @@ async def lifespan(app: FastAPI):
             filename,
         )
         return {"message": "Processing", "task_id": task_id}
+
+    @app.post("/proyek_saat_mencetak/preparing", tags=["Proyek Saat Mencetak"])
+    async def preparing_proyek_saat_mencetak(
+        payload: ProyekSaatMencetakDto, background_tasks: BackgroundTasks
+    ):
+        try:
+            task_id = str(uuid4())
+            get_coa_detail_saldo(task_id, payload.coa_number, payload.enititas)
+
+            background_tasks.add_task(
+                get_project_by_entitas,
+                task_id,
+                payload.coa_number,
+                payload.enititas,
+                payload.start_date,
+                payload.end_date,
+            )
+            return JSONResponse(
+                content={"message": "Preparing", "task_id": task_id}, status_code=200
+            )
+        except Exception as e:
+            print(e)
+            return JSONResponse(
+                content={"message": "Something went wrong"}, status_code=400
+            )
 
     @app.get("/download/{file_name}", tags=["Download"])
     async def download_file(file_name: str):

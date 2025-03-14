@@ -11,14 +11,11 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         wb = xlsxwriter.Workbook(filename)
         ws = wb.add_worksheet("Report")
 
-        # Define some formats
-        # bold = wb.add_format({"bold": True})
-        # center = wb.add_format({"align": "center", "valign": "vcenter"})
         border = wb.add_format(
             {
                 "border": 1,
             }
-        )  # Border format
+        )
 
         # Adding a custom style with bold, center alignment, and border
         center_merged = wb.add_format(
