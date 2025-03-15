@@ -20,7 +20,7 @@ def transaksi_tanpa_vendor_detail(task_id, coa, entitas, start_date, end_date):
         AND gl_transaksi.company_vendor_id IS NULL
         AND gl_transaksi_detail.coa = %s
         AND gl_transaksi.status_lvl_1 = 1
-    ORDER BY gl_transaksi.tanggal_transaksi DESC
+    ORDER BY gl_transaksi.tanggal_transaksi ASC
     """
 
     csv_file_path = f"temp/{task_id}_{constants.transaksi_tanpa_vendor_detail}.csv"
