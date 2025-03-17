@@ -8,11 +8,24 @@ from progress import states
 def transform(preparing_task_id: str):
     preparing_state = states.read_progress()
 
-    df_vendors_saldo = pd.read_csv(
+    df_vendors = pd.read_csv(
+        preparing_state[preparing_task_id]["filenames"][constants.get_vendors]
+    )
+
+    df_saldo_awal_per_vendors = pd.read_csv(
         preparing_state[preparing_task_id]["filenames"][
-            constants.get_vendors_and_saldo_detail
+            constants.get_saldo_awal_per_vendor
         ]
     )
+
+    df_saldo_per_vendors = pd.merge(
+        df_vendors,
+        df_saldo_awal_per_vendors,
+        on="company_vendor_id",
+        how="outer",
+    )
+
+    # df_saldo_per_vendors.to_csv("s.csv")
 
     df_buku_besar_transaksi = pd.read_csv(
         preparing_state[preparing_task_id]["filenames"][
@@ -23,15 +36,16 @@ def transform(preparing_task_id: str):
     # pivot
     merged_df = pd.merge(
         df_buku_besar_transaksi,
-        df_vendors_saldo,
-        left_on="company_vendor_id",
-        right_on="CompanyID",
-        how="inner",
+        df_saldo_per_vendors,
+        on="company_vendor_id",
+        how="outer",
     )
 
-    db_export = merged_df[
+    transform = merged_df.dropna(subset=["Saldo", "no_gl_transaksi"], how="all")
+
+    db_export = transform[
         [
-            "CompanyID",
+            "company_vendor_id",
             "tanggal_transaksi",
             "no_gl_transaksi",
             "keterangan",
@@ -45,7 +59,7 @@ def transform(preparing_task_id: str):
     ]
 
     # Mengelompokkan berdasarkan CompanyID
-    grouped_df = db_export.groupby("CompanyID")[
+    grouped_df = db_export.groupby("company_vendor_id")[
         [
             "debit",
             "kredit",

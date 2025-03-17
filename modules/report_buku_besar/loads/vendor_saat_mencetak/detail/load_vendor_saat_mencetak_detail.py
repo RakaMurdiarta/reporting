@@ -3,6 +3,7 @@ from progress import states
 from modules.report_buku_besar.processing.vendor_saat_mencetak.detail import (
     transform_vendor_saat_mencetak_detail,
 )
+import pandas as pd
 
 
 def load(processing_task_id: str, preparing_task_id: str, filename: str):
@@ -24,8 +25,6 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
 
         # Define some formats
         bold = wb.add_format({"bold": True})
-        center = wb.add_format({"align": "center", "valign": "vcenter"})
-        wrap = wb.add_format({"text_wrap": True})
         header_style = wb.add_format(
             {
                 "bold": True,
@@ -55,10 +54,15 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         ws.write("F8", "Kredit", header_style)
         ws.write("G8", "Saldo", header_style)
 
+        # to pin column
+        # ws.freeze_panes(8, 7)
+
         # Write data to the worksheet
         row = 9  # Start from row 9
-        sum = 0
-
+        total_sum = 0
+        debit_sum = 0
+        kredit_sum = 0
+        saldo_awal_sum = 0
         # Call transform data
         grouped_df = transform_vendor_saat_mencetak_detail.transform(preparing_task_id)
 
@@ -70,32 +74,68 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
             saldo_awal = 0
             counting = 1
             saldo_cal = 0
-
+            saldo_vendor_awal = 0
             for _, data_row in group.iterrows():
+                debit = 0
+                kredit = 0
+                saldo_vendor_awal = (
+                    data_row["Saldo"] if not pd.isna(data_row["Saldo"]) else 0
+                )
                 # Set the CoA number in the header
                 if counting == 1:
-                    saldo_awal = data_row["Saldo"]
+                    saldo_awal = saldo_vendor_awal
+
+                if not pd.isna(data_row["debit"]):
+                    debit = data_row["debit"]
+
+                if not pd.isna(data_row["kredit"]):
+                    kredit = data_row["kredit"]
 
                 # Handle calculation based on CoA prefix
                 if data_row["coa_prefix"] in [1, 5, 6, 7, 8]:
-                    ws.write(f"G{saldo}", data_row["Saldo"])
-                    saldo_cal = saldo_awal + data_row["debit"] - data_row["kredit"]
+                    ws.write(f"G{saldo}", saldo_vendor_awal)
+                    saldo_cal = saldo_awal + debit - kredit
                     ws.write(f"G{row}", saldo_cal)
                 else:
-                    ws.write(f"G{saldo}", data_row["Saldo"])
-                    saldo_cal = saldo_awal + data_row["kredit"] - data_row["debit"]
+                    ws.write(f"G{saldo}", saldo_vendor_awal)
+                    saldo_cal = saldo_awal + kredit - debit
                     ws.write(f"G{row}", saldo_cal)
 
                 # Write transaction details
-                ws.write(f"B{row}", data_row["tanggal_transaksi"])
-                ws.write(f"C{row}", data_row["no_gl_transaksi"])
-                ws.write(f"D{row}", data_row["keterangan"])
-                ws.write(f"E{row}", data_row["debit"])
-                ws.write(f"F{row}", data_row["kredit"])
+                ws.write(
+                    f"B{row}",
+                    (
+                        data_row["tanggal_transaksi"]
+                        if not pd.isna(data_row["tanggal_transaksi"])
+                        else ""
+                    ),
+                )
+                ws.write(
+                    f"C{row}",
+                    (
+                        data_row["no_gl_transaksi"]
+                        if not pd.isna(data_row["no_gl_transaksi"])
+                        else ""
+                    ),
+                )
+                ws.write(
+                    f"D{row}",
+                    (
+                        data_row["keterangan"]
+                        if not pd.isna(data_row["keterangan"])
+                        else ""
+                    ),
+                )
+
+                ws.write(f"E{row}", debit if not pd.isna(data_row["debit"]) else "")
+                ws.write(f"F{row}", kredit if not pd.isna(data_row["kredit"]) else "")
                 row += 1
                 saldo_awal = saldo_cal
                 counting += 1
-                sum += saldo_cal
+                total_sum += saldo_cal
+                debit_sum += debit
+                kredit_sum += kredit
+            saldo_awal_sum += saldo_vendor_awal
 
             saldo_awal = 0
             ws.write(f"F{row}", "Saldo Akhir", bold)
@@ -104,7 +144,22 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
 
         # Write total saldo
         ws.write(f"F{row + 1}", "Total Saldo", bold)
-        ws.write(f"G{row + 1}", sum)
+        ws.write(f"G{row + 1}", total_sum)
+        ws.write(f"F{row + 2}", "Total Debit", bold)
+        ws.write(f"G{row + 2}", debit_sum)
+        ws.write(f"F{row + 3}", "Total Kredit", bold)
+        ws.write(f"G{row + 3}", kredit_sum)
+        ws.write(f"F{row + 4}", "Total Saldo Awal", bold)
+        ws.write(f"G{row + 4}", saldo_awal_sum)
+
+        if data_row["coa_prefix"] in [1, 5, 6, 7, 8]:
+            grand_total = saldo_awal_sum + debit_sum - kredit_sum
+        else:
+            grand_total = saldo_awal_sum + kredit_sum - debit_sum
+
+        ws.write(f"F{row + 5}", "Grand Total", bold)
+        ws.write(f"G{row + 5}", grand_total)
+
         ws.autofit()
 
         # Save the file

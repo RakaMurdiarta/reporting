@@ -12,6 +12,8 @@ class Constant:
             "get_saldo_awal_transaksi_tanpa_vendor_detail"
         )
         self.get_vendors_and_saldo_detail = "get_vendors_and_saldo_detail"
+        self.get_vendors = "get_vendors"
+        self.get_saldo_awal_per_vendor = "get_saldo_awal_per_vendor"
 
 
 constants = Constant()
