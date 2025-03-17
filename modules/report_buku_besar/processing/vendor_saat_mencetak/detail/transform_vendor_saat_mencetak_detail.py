@@ -8,6 +8,10 @@ from progress import states
 def transform(preparing_task_id: str):
     preparing_state = states.read_progress()
 
+    df_saldo_paling_awal = pd.read_csv(
+        preparing_state[preparing_task_id]["filenames"][constants.get_saldo_paling_awal]
+    )
+
     df_vendors = pd.read_csv(
         preparing_state[preparing_task_id]["filenames"][constants.get_vendors]
     )
@@ -73,4 +77,4 @@ def transform(preparing_task_id: str):
         ]
     ].apply(lambda x: x.reset_index(drop=True))
 
-    return grouped_df
+    return grouped_df, df_saldo_paling_awal

@@ -59,12 +59,21 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
 
         # Write data to the worksheet
         row = 9  # Start from row 9
-        total_sum = 0
         debit_sum = 0
         kredit_sum = 0
         saldo_awal_sum = 0
         # Call transform data
-        grouped_df = transform_vendor_saat_mencetak_detail.transform(preparing_task_id)
+        grouped_df, df_saldo_paling_awal = (
+            transform_vendor_saat_mencetak_detail.transform(preparing_task_id)
+        )
+
+        saldo_paling_awal = (
+            df_saldo_paling_awal.iloc[0]["saldo_paling_awal"]
+            if not pd.isna(df_saldo_paling_awal.iloc[0]["saldo_paling_awal"])
+            else 0
+        )
+
+        print(saldo_paling_awal)
 
         for company_id, group in grouped_df.groupby(level=0):
             name = group.iloc[0]["Name"]
@@ -132,7 +141,6 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
                 row += 1
                 saldo_awal = saldo_cal
                 counting += 1
-                total_sum += saldo_cal
                 debit_sum += debit
                 kredit_sum += kredit
             saldo_awal_sum += saldo_vendor_awal
@@ -142,9 +150,6 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
             ws.write(f"G{row}", saldo_cal)
             row += 1
 
-        # Write total saldo
-        ws.write(f"F{row + 1}", "Total Saldo", bold)
-        ws.write(f"G{row + 1}", total_sum)
         ws.write(f"F{row + 2}", "Total Debit", bold)
         ws.write(f"G{row + 2}", debit_sum)
         ws.write(f"F{row + 3}", "Total Kredit", bold)
@@ -153,9 +158,9 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         ws.write(f"G{row + 4}", saldo_awal_sum)
 
         if data_row["coa_prefix"] in [1, 5, 6, 7, 8]:
-            grand_total = saldo_awal_sum + debit_sum - kredit_sum
+            grand_total = saldo_paling_awal + saldo_awal_sum + debit_sum - kredit_sum
         else:
-            grand_total = saldo_awal_sum + kredit_sum - debit_sum
+            grand_total = saldo_paling_awal + saldo_awal_sum + kredit_sum - debit_sum
 
         ws.write(f"F{row + 5}", "Grand Total", bold)
         ws.write(f"G{row + 5}", grand_total)
