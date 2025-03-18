@@ -8,3 +8,4 @@ proccessing.json
 temp/*
 venv
 venv/*
+.DS_Store

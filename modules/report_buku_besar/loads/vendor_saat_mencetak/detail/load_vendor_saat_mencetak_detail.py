@@ -181,7 +181,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         else:
             grand_total = saldo_paling_awal + saldo_awal_sum + kredit_sum - debit_sum
 
-        ws.merge_range(f"H{row + 3}:I{row + 3}", "Total", bold_center)
+        ws.merge_range(f"H{row + 3}:I{row + 3}", "Total Saldo Akhir", bold_center)
         ws.merge_range(f"H{row + 4}:I{row + 4}", grand_total, bold_center)
 
         ws.autofit()

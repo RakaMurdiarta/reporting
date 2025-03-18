@@ -4,6 +4,7 @@ from storages import coa_detail_saldo
 from modules.report_buku_besar.queries.proyek_saat_mencetak.constant.index import (
     constants,
 )
+import numpy as np
 
 
 def transform(preparing_task_id: str):
