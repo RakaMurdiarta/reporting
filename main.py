@@ -17,8 +17,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from modules.report_buku_besar.queries.vendor_saat_mencetak.detail import (
     buku_besar_transaksi_detail,
     get_transaksi_tanpa_vendor_detail,
-    get_vendors_saldo_detail,
+    get_saldo_awal_per_vendor,
+    get_vendors,
 )
+
 from modules.report_buku_besar.queries.vendor_saat_mencetak.rekap import (
     get_buku_besar_tanpa_vendor_rekap,
     get_transaksi_tanpa_vendor_rekap,
@@ -140,11 +142,21 @@ async def lifespan(app: FastAPI):
             )
 
             background_tasks.add_task(
-                get_vendors_saldo_detail.get_vendors_and_saldo_detail,
-                payload.enititas,
-                payload.coa_number,
-                payload.start_date,
+                get_vendors.get_vendors,
                 task_id,
+                payload.coa_number,
+                payload.enititas,
+                payload.start_date,
+                payload.end_date,
+            )
+
+            background_tasks.add_task(
+                get_saldo_awal_per_vendor.get_saldo_awal_per_vendor,
+                task_id,
+                payload.coa_number,
+                payload.enititas,
+                payload.start_date,
+                payload.end_date,
             )
 
             background_tasks.add_task(
@@ -275,16 +287,16 @@ async def lifespan(app: FastAPI):
                     payload.end_date,
                 )
 
-            if payload.view == 0:
-                background_tasks.add_task(in_order_exec)
-                background_tasks.add_task(
-                    get_saldo_awal_buku_besar_per_proyek_detail,
+                get_saldo_awal_buku_besar_per_proyek_detail(
                     task_id,
                     payload.coa_number,
                     payload.enititas,
                     payload.start_date,
                     payload.end_date,
                 )
+
+            if payload.view == 0:
+                background_tasks.add_task(in_order_exec)
             else:
                 background_tasks.add_task(
                     get_transaksi_rekap_by_projects,

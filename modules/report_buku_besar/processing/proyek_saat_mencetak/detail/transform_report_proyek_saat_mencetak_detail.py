@@ -1,12 +1,15 @@
 import pandas as pd
 from progress import states
+from storages import coa_detail_saldo
 from modules.report_buku_besar.queries.proyek_saat_mencetak.constant.index import (
     constants,
 )
+import numpy as np
 
 
 def transform(preparing_task_id: str):
     preparing_state = states.read_progress()
+    storage_coa = coa_detail_saldo.read_coa_detail_saldo()
 
     project_details_name = pd.read_csv(
         preparing_state[preparing_task_id]["filenames"][
@@ -26,21 +29,44 @@ def transform(preparing_task_id: str):
         ]
     )
 
+    df_saldo_awal_buku_agg = (
+        df_saldo_awal_buku_besar_per_proyek_detail.groupby("project_ProjectID")
+        .agg({"debit": "sum", "kredit": "sum"})
+        .reset_index()
+    )
+
+    coa_prefix = storage_coa[preparing_task_id]["coa_prefix"]
+
+    if coa_prefix in ["1", "5", "6", "7", "8"]:
+        df_saldo_awal_buku_agg["saldo_awal"] = (
+            df_saldo_awal_buku_agg["debit"] - df_saldo_awal_buku_agg["kredit"]
+        )
+    else:
+        df_saldo_awal_buku_agg["saldo_awal"] = (
+            df_saldo_awal_buku_agg["kredit"] - df_saldo_awal_buku_agg["debit"]
+        )
+
+    df_saldo_awal_buku_agg = df_saldo_awal_buku_agg[["project_ProjectID", "saldo_awal"]]
+
     df_merge_1 = pd.merge(
         df_transaksi_detail,
         project_details_name,
         on="project_ProjectID",
-        how="left",
+        how="outer",
     )
 
     df_merge_final = pd.merge(
         df_merge_1,
-        df_saldo_awal_buku_besar_per_proyek_detail,
+        df_saldo_awal_buku_agg,
         on="project_ProjectID",
-        how="left",
+        how="outer",
     )
 
-    db_export = df_merge_final[
+    transform = df_merge_final.dropna(
+        subset=["saldo_awal", "no_gl_transaksi"], how="all"
+    )
+
+    db_export = transform[
         [
             "project_ProjectID",
             "Name",
@@ -49,7 +75,7 @@ def transform(preparing_task_id: str):
             "keterangan",
             "debit",
             "kredit",
-            "Saldo",
+            "saldo_awal",
         ]
     ]
 

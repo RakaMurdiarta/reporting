@@ -4,6 +4,7 @@ from storages import coa_detail_saldo
 from modules.report_buku_besar.processing.proyek_saat_mencetak.detail.transform_report_proyek_saat_mencetak_detail import (
     transform,
 )
+import pandas as pd
 
 
 def load(processing_task_id: str, preparing_task_id: str, filename: str):
@@ -13,6 +14,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         store = coa_detail_saldo.read_coa_detail_saldo()
 
         coa_prefix = store[preparing_task_id]["coa_prefix"]
+        saldo_paling_awal = store[preparing_task_id]["saldo_paling_awal"]
         state_progres[processing_task_id] = {"status": "started"}
         states.write_proccessing(state_progres)
         state_progres[processing_task_id] = {"status": "process"}
@@ -43,6 +45,21 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         font_14_bold = wb.add_format(
             {"font_size": 14, "bold": True, "align": "center", "valign": "vcenter"}
         )
+        bold = wb.add_format(
+            {
+                "bold": True,
+                "align": "center",
+                "valign": "vcenter",
+            }
+        )
+        bold_center = wb.add_format(
+            {
+                "bold": True,
+                "align": "center",
+                "valign": "vcenter",
+                "border": 1,
+            }
+        )
 
         # Set title and period
         ws.merge_range("A3:G3", "Buku Besar Tampil Per Vendor TJS Detail", font_18_bold)
@@ -52,17 +69,23 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         ws.write("B8", "Tanggal Transaksi", header_style)
         ws.write("C8", "Bukti Transaksi", header_style)
         ws.write("D8", "Keterangan", header_style)
-        ws.write("E8", "Debit", header_style)
-        ws.write("F8", "Kredit", header_style)
-        ws.write("G8", "Saldo", header_style)
+        ws.write("E8", "Saldo Awal", header_style)
+        ws.write("F8", "Debit", header_style)
+        ws.write("G8", "Kredit", header_style)
+        ws.write("H8", "Saldo", header_style)
+        ws.write("I8", "Saldo Akhir", header_style)
 
         row = 9  # Start from row 9
         sum = 0
+        debit_sum = 0
+        kredit_sum = 0
+        saldo_awal_sum = 0
 
         # Call transform data
         grouped_df = transform(preparing_task_id)
 
         for company_id, group in grouped_df.groupby(level=0):
+            merge_first_row = row
             name = group.iloc[0]["Name"]
             ws.write(f"A{row}", name, bold)
             row += 2  # Move to the next row
@@ -70,42 +93,97 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
             saldo_awal = 0
             counting = 1
             saldo_cal = 0
+            parse_saldo = 0
 
             for _, data_row in group.iterrows():
+                debit = 0
+                kredit = 0
                 # Set the CoA number in the header
-                parse_saldo = data_row["Saldo"] if data_row["Saldo"] == None else 0
+                parse_saldo = (
+                    data_row["saldo_awal"] if not pd.isna(data_row["saldo_awal"]) else 0
+                )
 
                 if counting == 1:
                     saldo_awal = parse_saldo
 
+                if not pd.isna(data_row["debit"]):
+                    debit = data_row["debit"]
+
+                if not pd.isna(data_row["kredit"]):
+                    kredit = data_row["kredit"]
+
                 if coa_prefix in [1, 5, 6, 7, 8]:
-                    ws.write(f"G{saldo}", parse_saldo)
-                    saldo_cal = saldo_awal + data_row["debit"] - data_row["kredit"]
-                    ws.write(f"G{row}", saldo_cal)
+                    saldo_cal = saldo_awal + debit - kredit
+                    ws.write(f"H{row}", saldo_cal)
                 else:
-                    ws.write(f"G{saldo}", parse_saldo)
-                    saldo_cal = saldo_awal + data_row["kredit"] - data_row["debit"]
-                    ws.write(f"G{row}", saldo_cal)
+                    saldo_cal = saldo_awal + kredit - debit
+                    ws.write(f"H{row}", saldo_cal)
 
                 # Write transaction details
-                ws.write(f"B{row}", data_row["tanggal_transaksi"])
-                ws.write(f"C{row}", data_row["no_gl_transaksi"])
-                ws.write(f"D{row}", data_row["keterangan"])
-                ws.write(f"E{row}", data_row["debit"])
-                ws.write(f"F{row}", data_row["kredit"])
+                ws.write(
+                    f"B{row}",
+                    (
+                        data_row["tanggal_transaksi"]
+                        if not pd.isna(data_row["tanggal_transaksi"])
+                        else ""
+                    ),
+                )
+                ws.write(
+                    f"C{row}",
+                    (
+                        data_row["no_gl_transaksi"]
+                        if not pd.isna(data_row["no_gl_transaksi"])
+                        else ""
+                    ),
+                )
+                ws.write(
+                    f"D{row}",
+                    (
+                        data_row["keterangan"]
+                        if not pd.isna(data_row["keterangan"])
+                        else ""
+                    ),
+                )
+
+                ws.write(f"F{row}", debit if not pd.isna(data_row["debit"]) else "")
+                ws.write(f"G{row}", kredit if not pd.isna(data_row["kredit"]) else "")
+
                 row += 1
                 saldo_awal = saldo_cal
                 counting += 1
                 sum += saldo_cal
+                debit_sum += debit
+                kredit_sum += kredit
+            ws.merge_range(f"E{merge_first_row}:E{row}", parse_saldo, bold)
+            ws.merge_range(f"I{merge_first_row}:I{row}", saldo_cal, bold)
+            ws.merge_range(f"A{merge_first_row}:A{row}", name, bold)
+
+            saldo_awal_sum += parse_saldo
 
             saldo_awal = 0
-            ws.write(f"F{row}", "Saldo Akhir", bold)
-            ws.write(f"G{row}", saldo_cal)
             row += 1
 
         # Write total saldo
-        ws.write(f"F{row + 1}", "Total Saldo", bold)
-        ws.write(f"G{row + 1}", sum)
+        ws.merge_range(f"D{row+3}:D{row+4}", "Grand Total", bold_center)
+        ws.write(f"E{row+3}", "Total Saldo Awal", bold_center)
+        ws.write(f"E{row+ 4}", saldo_awal_sum, bold_center)
+        ws.write(f"F{row+3}", "Total Debit", bold_center)
+        ws.write(f"F{row+ 4}", debit_sum, bold_center)
+        ws.write(f"G{row+3}", "Total Kredit", bold_center)
+        ws.write(f"G{row + 4}", kredit_sum, bold_center)
+
+        if coa_prefix in [1, 5, 6, 7, 8]:
+            grand_total = (
+                int(saldo_paling_awal) + saldo_awal_sum + debit_sum - kredit_sum
+            )
+        else:
+            grand_total = (
+                int(saldo_paling_awal) + saldo_awal_sum + kredit_sum - debit_sum
+            )
+
+        ws.merge_range(f"H{row + 3}:I{row + 3}", "Total Saldo Akhir", bold_center)
+        ws.merge_range(f"H{row + 4}:I{row + 4}", grand_total, bold_center)
+
         ws.autofit()
 
         # Save the file
