@@ -1,0 +1,1 @@
+this is a temporary folder that containts any files from queries or exporting report!!

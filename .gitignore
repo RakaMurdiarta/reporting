@@ -6,6 +6,7 @@ progress.json
 .env
 proccessing.json
 temp/*
+!temp/*.md
 venv
 venv/*
 .DS_Store
