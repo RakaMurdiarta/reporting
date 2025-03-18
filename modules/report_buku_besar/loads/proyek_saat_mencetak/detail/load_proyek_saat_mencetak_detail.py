@@ -62,6 +62,8 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         # Call transform data
         grouped_df = transform(preparing_task_id)
 
+        return
+
         for company_id, group in grouped_df.groupby(level=0):
             name = group.iloc[0]["Name"]
             ws.write(f"A{row}", name, bold)

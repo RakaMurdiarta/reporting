@@ -287,16 +287,16 @@ async def lifespan(app: FastAPI):
                     payload.end_date,
                 )
 
-            if payload.view == 0:
-                background_tasks.add_task(in_order_exec)
-                background_tasks.add_task(
-                    get_saldo_awal_buku_besar_per_proyek_detail,
+                get_saldo_awal_buku_besar_per_proyek_detail(
                     task_id,
                     payload.coa_number,
                     payload.enititas,
                     payload.start_date,
                     payload.end_date,
                 )
+
+            if payload.view == 0:
+                background_tasks.add_task(in_order_exec)
             else:
                 background_tasks.add_task(
                     get_transaksi_rekap_by_projects,

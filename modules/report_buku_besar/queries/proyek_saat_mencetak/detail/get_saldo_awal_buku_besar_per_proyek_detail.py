@@ -6,6 +6,7 @@ from modules.report_buku_besar.queries.proyek_saat_mencetak.constant.index impor
     constants,
 )
 from utils import preparation_helper, writer_csv_helper
+from progress import states
 
 
 def get_saldo_awal_buku_besar_per_proyek_detail(
@@ -17,27 +18,40 @@ def get_saldo_awal_buku_besar_per_proyek_detail(
     )
 
     try:
+        progress = states.read_progress()
+
         conn = db_pool.pool.connection()
         cursor = conn.cursor()
         chunk_size = 6000
+
         if str(coa_number)[0] in ["1", "5", "6", "7", "8"]:
             saldo_column = "SUM(debit - kredit) AS Saldo"
         else:
             saldo_column = "SUM(kredit - debit) AS Saldo"
 
+        project_ids = progress[task_id]["filenames"][constants.get_project_by_entitas]
+
+        project_ids = pd.read_csv(
+            project_ids, chunksize=chunk_size, header=None, skiprows=[0]
+        )
+
+        for project_id in project_ids:
+            project_id_str = ",".join(f"'{id}'" for id in project_id[0].tolist())
+
         sql = f"""
         SELECT
-            gl_transaksi.project_ProjectID,
-            {saldo_column}
+            gl_transaksi_detail.debit,
+            gl_transaksi_detail.kredit,
+            gl_transaksi.project_ProjectID
         FROM gl_transaksi
         JOIN gl_transaksi_detail
             ON gl_transaksi.id = gl_transaksi_detail.transaksi_id
         WHERE gl_transaksi.company_CompanyID like %s
+            AND gl_transaksi.project_ProjectID IN ({project_id_str})
             AND gl_transaksi.status_lvl_1 = 1
             AND gl_transaksi_detail.deleted_at IS NULL
             AND gl_transaksi_detail.coa = %s
-            AND gl_transaksi.tanggal_transaksi <= %s
-        GROUP BY project_ProjectID
+            AND gl_transaksi.tanggal_transaksi < %s
         """
 
         def sql_exec():
