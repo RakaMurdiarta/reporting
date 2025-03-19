@@ -25,7 +25,13 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         wb = xlsxwriter.Workbook(filename)
         ws = wb.add_worksheet("Report")
 
-        bold = wb.add_format({"bold": True})
+        bold = wb.add_format(
+            {
+                "bold": True,
+                "align": "center",
+                "valign": "vcenter",
+            }
+        )
         header_style = wb.add_format(
             {
                 "bold": True,
@@ -59,35 +65,39 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
             vendor_row = row - 1
             proyek_row = row - 2
             saldo_akhir = 0
-
-            ws.write(f"A{proyek_row}", "Proyek", header_style)
-            ws.write(f"B{proyek_row}", "Debit", header_style)
-            ws.write(f"C{proyek_row}", "Kredit", header_style)
-            ws.write(f"D{proyek_row}", "Saldo", header_style)
+            merge_first_row = row
+            ws.write(f"A{proyek_row}", "Vendor", header_style)
+            ws.write(f"B{proyek_row}", "Proyek", header_style)
+            ws.write(f"C{proyek_row}", "Debit", header_style)
+            ws.write(f"D{proyek_row}", "Kredit", header_style)
+            ws.write(f"E{proyek_row}", "Saldo", header_style)
+            ws.write(f"F{proyek_row}", "Saldo Akhir", header_style)
+            vendor_label = ""
 
             for index, data_row in group.iterrows():
-                ws.write(f"A{vendor_row}", data_row["Vendor"], bold)
+                vendor_label = data_row["Vendor"]
                 saldo = data_row["Saldo"] if not pd.isna(data_row["Saldo"]) else 0
                 kredit = data_row["kredit"] if not pd.isna(data_row["kredit"]) else ""
                 debit = data_row["debit"] if not pd.isna(data_row["debit"]) else ""
                 (
-                    ws.write(f"A{row}", data_row["proyek"])
+                    ws.write(f"B{row}", data_row["proyek"])
                     if not pd.isna(data_row["proyek"])
-                    else ws.write(f"A{row}", "")
+                    else ws.write(f"B{row}", "")
                 )
-                ws.write(f"B{row}", debit)
-                ws.write(f"C{row}", kredit)
-                ws.write(f"D{row}", saldo)
+                ws.write(f"C{row}", debit)
+                ws.write(f"D{row}", kredit)
+                ws.write(f"E{row}", saldo)
                 row += 1
                 saldo_akhir += saldo
+            ws.merge_range(f"A{merge_first_row}:A{row}", vendor_label, bold)
+            ws.merge_range(f"F{merge_first_row}:F{row}", saldo_akhir, bold)
+
             # vendor_row
             grand_total += saldo_akhir
-            ws.write(f"A{row}", "Saldo Akhir", bold)
-            ws.write(f"D{row}", saldo_akhir, bold)
             row += 4
 
         ws.write(f"A{row}", "Grand Total", bold)
-        ws.write(f"D{row}", grand_total, bold)
+        ws.write(f"F{row}", grand_total, bold)
         ws.autofit()
         wb.close()
         print("Data has been processed and saved.")
