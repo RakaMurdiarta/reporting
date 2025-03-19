@@ -248,10 +248,10 @@ async def lifespan(app: FastAPI):
         range_dates = preparing_state[payload.preparing_task_id]["range_date"]
         start_date = range_dates["start_date"]
         end_date = range_dates["end_date"]
-
-        filename = (
-            f"temp/{task_id}_{start_date}_{end_date}_report_proyek_pada_vendor.xlsx"
+        expose_name = (
+            f"{task_id}_{start_date}_{end_date}_report_proyek_pada_vendor.xlsx"
         )
+        filename = f"temp/{expose_name}"
 
         background_tasks.add_task(
             run_script_proyek_pada_vendor,
@@ -259,7 +259,7 @@ async def lifespan(app: FastAPI):
             payload.preparing_task_id,
             filename,
         )
-        return {"message": "Processing", "task_id": task_id}
+        return {"message": "Processing", "task_id": task_id, "filename": expose_name}
 
     @app.post("/proyek_saat_mencetak/preparing", tags=["Proyek Saat Mencetak"])
     async def preparing_proyek_saat_mencetak(

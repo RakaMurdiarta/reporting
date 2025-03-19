@@ -3,6 +3,7 @@ from progress import states
 from modules.report_buku_besar.processing.proyek_pada_vendor.transform_proyek_pada_vendor import (
     transform,
 )
+import pandas as pd
 
 
 def load(processing_task_id: str, preparing_task_id: str, filename: str):
@@ -54,7 +55,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         grand_total = 0
         df_proyek_pada_vendor_transaksi = transform(preparing_task_id)
 
-        for vendor, group in df_proyek_pada_vendor_transaksi.groupby(level=0):
+        for _, group in df_proyek_pada_vendor_transaksi.groupby("company_vendor_id"):
             vendor_row = row - 1
             proyek_row = row - 2
             saldo_akhir = 0
@@ -63,22 +64,30 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
             ws.write(f"B{proyek_row}", "Debit", header_style)
             ws.write(f"C{proyek_row}", "Kredit", header_style)
             ws.write(f"D{proyek_row}", "Saldo", header_style)
-            ws.write(f"A{vendor_row}", f"Vendor: {vendor}", bold)
 
             for index, data_row in group.iterrows():
-                ws.write(f"A{row}", data_row["proyek"], border)
-                ws.write(f"B{row}", data_row["debit"], border)
-                ws.write(f"C{row}", data_row["kredit"], border)
-                ws.write(f"D{row}", data_row["Saldo"], border)
+                ws.write(f"A{vendor_row}", data_row["Vendor"], bold)
+                saldo = data_row["Saldo"] if not pd.isna(data_row["Saldo"]) else 0
+                kredit = data_row["kredit"] if not pd.isna(data_row["kredit"]) else ""
+                debit = data_row["debit"] if not pd.isna(data_row["debit"]) else ""
+                (
+                    ws.write(f"A{row}", data_row["proyek"])
+                    if not pd.isna(data_row["proyek"])
+                    else ws.write(f"A{row}", "")
+                )
+                ws.write(f"B{row}", debit)
+                ws.write(f"C{row}", kredit)
+                ws.write(f"D{row}", saldo)
                 row += 1
-                saldo_akhir += data_row["Saldo"]
+                saldo_akhir += saldo
+            # vendor_row
             grand_total += saldo_akhir
-            ws.write(f"A{row}", "Saldo Akhir", border_bold)
-            ws.write(f"D{row}", saldo_akhir, border_bold)
+            ws.write(f"A{row}", "Saldo Akhir", bold)
+            ws.write(f"D{row}", saldo_akhir, bold)
             row += 4
 
-        ws.write(f"A{row}", "Grand Total", border_bold)
-        ws.write(f"D{row}", grand_total, border_bold)
+        ws.write(f"A{row}", "Grand Total", bold)
+        ws.write(f"D{row}", grand_total, bold)
         ws.autofit()
         wb.close()
         print("Data has been processed and saved.")

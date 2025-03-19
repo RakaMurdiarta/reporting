@@ -4,11 +4,19 @@ from modules.report_buku_besar.queries.proyek_pada_vendor.constant.index import 
     constants,
 )
 
+import numpy as np
+
 
 def transform(preparing_task_id: str):
     preparing_state = states.read_progress()
 
     coa_number = preparing_state[preparing_task_id]["coa_number"]
+
+    df_companies = pd.read_csv(
+        preparing_state[preparing_task_id]["filenames"][
+            constants.get_company_vendors_proyek_pada_vendor
+        ]
+    )
 
     df_proyek_pada_vendor = pd.read_csv(
         preparing_state[preparing_task_id]["filenames"][
@@ -16,21 +24,35 @@ def transform(preparing_task_id: str):
         ]
     )
 
-    df_proyek_pada_vendor = df_proyek_pada_vendor.groupby(
-        ["vendor", "proyek"], as_index=False
-    ).sum()
+    df_merge = pd.merge(
+        df_companies, df_proyek_pada_vendor, on="company_vendor_id", how="outer"
+    )
+
+    df_merge["debit"] = df_merge["debit"].fillna(0)
+    df_merge["kredit"] = df_merge["kredit"].fillna(0)
+
+    agg_sum_kredit_debit = (
+        df_merge.groupby(["company_vendor_id", "proyek"])
+        .agg({"debit": "sum", "kredit": "sum"})
+        .reset_index()
+    )
 
     if str(coa_number)[0] in ["1", "5", "6", "7", "8"]:
-        df_proyek_pada_vendor["Saldo"] = (
-            df_proyek_pada_vendor["debit"] - df_proyek_pada_vendor["kredit"]
+        agg_sum_kredit_debit["Saldo"] = (
+            agg_sum_kredit_debit["debit"] - agg_sum_kredit_debit["kredit"]
         )
     else:
-        df_proyek_pada_vendor["Saldo"] = (
-            df_proyek_pada_vendor["kredit"] - df_proyek_pada_vendor["debit"]
+        agg_sum_kredit_debit["Saldo"] = (
+            agg_sum_kredit_debit["kredit"] - agg_sum_kredit_debit["debit"]
         )
+    agg_sum_kredit_debit = agg_sum_kredit_debit[
+        ["company_vendor_id", "Saldo", "proyek", "kredit", "debit"]
+    ]
+    df_merge = df_merge[["company_vendor_id", "Vendor", "proyek"]]
 
-    df_proyek_pada_vendor = df_proyek_pada_vendor.groupby("vendor")[
-        ["vendor", "proyek", "debit", "kredit", "Saldo"]
-    ].apply(lambda x: x.reset_index(drop=True))
+    merging = pd.merge(
+        df_merge, agg_sum_kredit_debit, on=["company_vendor_id", "proyek"], how="left"
+    )
 
-    return df_proyek_pada_vendor
+    unique = merging.drop_duplicates()
+    return unique
