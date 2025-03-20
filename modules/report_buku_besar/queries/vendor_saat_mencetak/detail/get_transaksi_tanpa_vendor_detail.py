@@ -55,7 +55,7 @@ def transaksi_tanpa_vendor_detail(task_id, coa, entitas, start_date, end_date):
 
 
 def get_saldo_awal_transaksi_tanpa_vendor_detail(task_id, coa, entitas, start_date):
-    if str(coa)[0] in ["1", "5", "6", "7", "8"]:
+    if str(coa)[0] in ["1", "4", "5", "6", "7", "8", "9"]:
         saldo_column = "SUM(debit - kredit) AS Saldo"
     else:
         saldo_column = "SUM(kredit - debit) AS Saldo"
