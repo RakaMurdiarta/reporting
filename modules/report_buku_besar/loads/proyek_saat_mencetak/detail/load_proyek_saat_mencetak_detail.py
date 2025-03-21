@@ -15,6 +15,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
 
         coa_prefix = store[preparing_task_id]["coa_prefix"]
         saldo_paling_awal = store[preparing_task_id]["saldo_paling_awal"]
+        coa_label = store[preparing_task_id]["coa_label"]
         state_progres[processing_task_id] = {"status": "started"}
         states.write_proccessing(state_progres)
         state_progres[processing_task_id] = {"status": "process"}
@@ -42,6 +43,9 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         )
         font_14_bold = wb.add_format(
             {"font_size": 14, "bold": True, "align": "center", "valign": "vcenter"}
+        )
+        font_12_bold = wb.add_format(
+            {"font_size": 12, "bold": True, "align": "center", "valign": "vcenter"}
         )
         bold = wb.add_format(
             {
@@ -80,6 +84,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         # Set title and period
         ws.merge_range("A3:G3", "BUKU BESAR TAMPIL PER PROYEK DETAIL", font_18_bold)
         ws.merge_range("A4:G4", f"Periode : {start_date} - {end_date}", font_14_bold)
+        ws.merge_range("A5:G5", f"COA : {coa_label}", font_12_bold)
 
         row = 9  # Start from row 9
         debit_sum = 0
