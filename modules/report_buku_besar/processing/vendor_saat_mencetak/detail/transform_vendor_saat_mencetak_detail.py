@@ -12,6 +12,18 @@ def transform(preparing_task_id: str):
         preparing_state[preparing_task_id]["filenames"][constants.get_saldo_paling_awal]
     )
 
+    df_saldo_awal_tanpa_vendor = pd.read_csv(
+        preparing_state[preparing_task_id]["filenames"][
+            constants.get_saldo_awal_transaksi_tanpa_vendor_detail
+        ]
+    )
+
+    df_transaksi_tanpa_vendor = pd.read_csv(
+        preparing_state[preparing_task_id]["filenames"][
+            constants.transaksi_tanpa_vendor_detail
+        ]
+    )
+
     df_vendors = pd.read_csv(
         preparing_state[preparing_task_id]["filenames"][constants.get_vendors]
     )
@@ -77,4 +89,9 @@ def transform(preparing_task_id: str):
         ]
     ].apply(lambda x: x.reset_index(drop=True))
 
-    return grouped_df, df_saldo_paling_awal
+    return (
+        grouped_df,
+        df_saldo_paling_awal,
+        df_saldo_awal_tanpa_vendor,
+        df_transaksi_tanpa_vendor,
+    )
