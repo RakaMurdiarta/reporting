@@ -23,14 +23,6 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         wb = xlsxwriter.Workbook(filename)
         ws = wb.add_worksheet("Report")
 
-        # Define some formats
-        bold = wb.add_format(
-            {
-                "bold": True,
-                "align": "center",
-                "valign": "vcenter",
-            }
-        )
         bold_left = wb.add_format(
             {
                 "bold": True,
@@ -41,6 +33,12 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
                 "bold": True,
                 "align": "center",
                 "valign": "vcenter",
+                "border": 1,
+            }
+        )
+        border_left = wb.add_format(
+            {
+                "bold": True,
                 "border": 1,
             }
         )
@@ -108,14 +106,10 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
             counting = 1
             saldo_cal = 0
             saldo_vendor_awal = 0
-            skip_debit_kredit = False
-
+            merge_saldo_awal = False
             # write header column
             for _, data_row in group.iterrows():
                 coa_prefix = data_row["coa_prefix"]
-                if pd.isna(data_row["kredit"]) and pd.isna(data_row["debit"]):
-                    skip_debit_kredit = True
-
                 debit = 0
                 kredit = 0
                 saldo_vendor_awal = (
@@ -131,17 +125,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
                 if not pd.isna(data_row["kredit"]):
                     kredit = data_row["kredit"]
 
-                if coa_prefix in [1, 5, 6, 7, 8]:
-                    saldo_cal = saldo_awal + debit - kredit
-                    if not skip_debit_kredit:
-                        ws.write(f"F{row}", saldo_cal, border)
-
-                else:
-                    # ws.write(f"H{saldo}", saldo_vendor_awal)
-                    saldo_cal = saldo_awal + kredit - debit
-                    if not skip_debit_kredit:
-                        ws.write(f"F{row}", saldo_cal, border)
-
+                # =======start write to excel ==============
                 ws.write(f"A{name_row}", name, bold_left)
                 ws.write(f"A{header_row}", "TANGGAL", header_style)
                 ws.write(f"B{header_row}", "NO BUKTI", header_style)
@@ -149,37 +133,50 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
                 ws.write(f"D{header_row}", "DEBIT", header_style)
                 ws.write(f"E{header_row}", "KREDIT", header_style)
                 ws.write(f"F{header_row}", "SALDO", header_style)
-                ws.write(f"A{saldo_awal_row}", "Saldo Awal", bold_left)
-                ws.write(f"F{saldo_awal_row}", saldo_vendor_awal)
-                # Write transaction details
-                ws.write(
-                    f"A{row}",
-                    (
-                        data_row["tanggal_transaksi"]
-                        if not pd.isna(data_row["tanggal_transaksi"])
-                        else ""
-                    ),
-                    border,
-                )
-                ws.write(
-                    f"B{row}",
-                    (
-                        data_row["no_gl_transaksi"]
-                        if not pd.isna(data_row["no_gl_transaksi"])
-                        else ""
-                    ),
-                    border,
-                )
-                ws.write(
-                    f"C{row}",
-                    (
-                        data_row["keterangan"]
-                        if not pd.isna(data_row["keterangan"])
-                        else ""
-                    ),
-                    border,
-                )
-                if not skip_debit_kredit:
+                if not merge_saldo_awal:
+                    ws.merge_range(
+                        f"A{saldo_awal_row}:E{saldo_awal_row}",
+                        "SALDO AWAL",
+                        border_left,
+                    )
+                    ws.write(f"F{saldo_awal_row}", saldo_vendor_awal)
+                    merge_saldo_awal = True
+                if pd.isna(data_row["no_gl_transaksi"]):
+
+                    if coa_prefix in [1, 4, 5, 6, 7, 8, 9]:
+                        saldo_cal = saldo_awal + debit - kredit
+                    else:
+                        saldo_cal = saldo_awal + kredit - debit
+                    continue
+                else:
+                    ws.write(
+                        f"A{row}",
+                        (
+                            data_row["tanggal_transaksi"]
+                            if not pd.isna(data_row["tanggal_transaksi"])
+                            else ""
+                        ),
+                        border,
+                    )
+                    ws.write(
+                        f"B{row}",
+                        (
+                            data_row["no_gl_transaksi"]
+                            if not pd.isna(data_row["no_gl_transaksi"])
+                            else ""
+                        ),
+                        border,
+                    )
+                    ws.write(
+                        f"C{row}",
+                        (
+                            data_row["keterangan"]
+                            if not pd.isna(data_row["keterangan"])
+                            else ""
+                        ),
+                        border,
+                    )
+
                     ws.write(
                         f"D{row}",
                         debit if not pd.isna(data_row["debit"]) else "",
@@ -190,20 +187,28 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
                         kredit if not pd.isna(data_row["kredit"]) else "",
                         border,
                     )
-                else:
-                    continue
+                    if coa_prefix in [1, 4, 5, 6, 7, 8, 9]:
+                        saldo_cal = saldo_awal + debit - kredit
+                        ws.write(f"F{row}", saldo_cal, border)
+
+                    else:
+                        # ws.write(f"H{saldo}", saldo_vendor_awal)
+                        saldo_cal = saldo_awal + kredit - debit
+                        ws.write(f"F{row}", saldo_cal, border)
                 saldo_awal = saldo_cal
                 row += 1
                 counting += 1
                 debit_sum += debit
                 kredit_sum += kredit
-                skip_debit_kredit = False
 
-            ws.write(f"F{row}", saldo_cal)
+            ws.merge_range(f"A{row}:E{row}", "SALDO AKHIR", border_left)
+            ws.write(f"F{row}", saldo_cal, border)
+
             saldo_awal_sum += saldo_vendor_awal
-            row += 2
+            row += 3
 
         row += 2
+
         # this is for transaksi tanpa vendor
         if not df_transaksi_tanpa_vendor.empty:
             vendor_count = 1
@@ -223,15 +228,6 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
                 if not pd.isna(data_row["kredit"]):
                     tanpa_vendor_kredit = data_row["kredit"]
 
-                if coa_prefix in [1, 4, 5, 6, 7, 8, 9]:
-                    # ws.write(f"H{saldo}", saldo_vendor_awal)
-                    saldo_cal = saldo_awal + tanpa_vendor_debit - tanpa_vendor_kredit
-                    ws.write(f"F{row}", saldo_cal, border)
-                else:
-                    # ws.write(f"H{saldo}", saldo_vendor_awal)
-                    saldo_cal = saldo_awal + tanpa_vendor_kredit - tanpa_vendor_debit
-                    ws.write(f"F{row}", saldo_cal, border)
-
                 ws.write(
                     f"A{name_row_tanpa_vendor}",
                     "TRANSAKSI TANPA VENDOR",
@@ -243,69 +239,96 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
                 ws.write(f"D{header_row_tanpa_vendor}", "DEBIT", header_style)
                 ws.write(f"E{header_row_tanpa_vendor}", "KREDIT", header_style)
                 ws.write(f"F{header_row_tanpa_vendor}", "SALDO", header_style)
-                ws.write(f"A{saldo_awal_row_tanpa_vendor}", "Saldo Awal", bold_left)
+                ws.write(f"A{saldo_awal_row_tanpa_vendor}", "SALDO AWAL", bold_left)
                 ws.write(f"F{saldo_awal_row_tanpa_vendor}", saldo_awal)
 
-                ws.write(
-                    f"A{row}",
-                    (
-                        data_row["tanggal_transaksi"]
-                        if not pd.isna(data_row["tanggal_transaksi"])
-                        else ""
-                    ),
-                    border,
-                )
-                ws.write(
-                    f"B{row}",
-                    (
-                        data_row["no_gl_transaksi"]
-                        if not pd.isna(data_row["no_gl_transaksi"])
-                        else ""
-                    ),
-                    border,
-                )
-                ws.write(
-                    f"C{row}",
-                    (
-                        data_row["keterangan"]
-                        if not pd.isna(data_row["keterangan"])
-                        else ""
-                    ),
-                    border,
-                )
+                if pd.isna(data_row["no_gl_transaksi"]):
+                    if coa_prefix in [1, 4, 5, 6, 7, 8, 9]:
+                        # ws.write(f"H{saldo}", saldo_vendor_awal)
+                        saldo_cal = (
+                            saldo_awal + tanpa_vendor_debit - tanpa_vendor_kredit
+                        )
+                    else:
+                        # ws.write(f"H{saldo}", saldo_vendor_awal)
+                        saldo_cal = (
+                            saldo_awal + tanpa_vendor_kredit - tanpa_vendor_debit
+                        )
+                    continue
+                else:
+                    ws.write(
+                        f"A{row}",
+                        (
+                            data_row["tanggal_transaksi"]
+                            if not pd.isna(data_row["tanggal_transaksi"])
+                            else ""
+                        ),
+                        border,
+                    )
+                    ws.write(
+                        f"B{row}",
+                        (
+                            data_row["no_gl_transaksi"]
+                            if not pd.isna(data_row["no_gl_transaksi"])
+                            else ""
+                        ),
+                        border,
+                    )
+                    ws.write(
+                        f"C{row}",
+                        (
+                            data_row["keterangan_transaksi"]
+                            if not pd.isna(data_row["keterangan_transaksi"])
+                            else ""
+                        ),
+                        border,
+                    )
 
-                ws.write(
-                    f"D{row}",
-                    tanpa_vendor_debit if not pd.isna(data_row["debit"]) else "",
-                    border,
-                )
-                ws.write(
-                    f"E{row}",
-                    tanpa_vendor_kredit if not pd.isna(data_row["kredit"]) else "",
-                    border,
-                )
+                    ws.write(
+                        f"D{row}",
+                        tanpa_vendor_debit if not pd.isna(data_row["debit"]) else "",
+                        border,
+                    )
+                    ws.write(
+                        f"E{row}",
+                        tanpa_vendor_kredit if not pd.isna(data_row["kredit"]) else "",
+                        border,
+                    )
+
+                    if coa_prefix in [1, 4, 5, 6, 7, 8, 9]:
+                        # ws.write(f"H{saldo}", saldo_vendor_awal)
+                        saldo_cal = (
+                            saldo_awal + tanpa_vendor_debit - tanpa_vendor_kredit
+                        )
+                        ws.write(f"F{row}", saldo_cal, border)
+                    else:
+                        # ws.write(f"H{saldo}", saldo_vendor_awal)
+                        saldo_cal = (
+                            saldo_awal + tanpa_vendor_kredit - tanpa_vendor_debit
+                        )
+                        ws.write(f"F{row}", saldo_cal, border)
                 saldo_awal = saldo_cal
                 row += 1
                 saldo_awal_sum += saldo_awal_tanpa_vendor
                 debit_sum += tanpa_vendor_debit
                 kredit_sum += tanpa_vendor_kredit
+            ws.write(f"A{row}", "SALDO AKHIR", bold_left)
             ws.write(f"F{row}", saldo_cal)
 
-        ws.merge_range(f"A{row+3}:B{row+4}", "GRAND TOTAL", bold_center)
-        ws.write(f"C{row+3}", "SALDO AWAL", bold_center)
-        ws.write(f"C{row+ 4}", saldo_awal_sum, bold_center)
-        ws.write(f"D{row+3}", "DEBET", bold_center)
-        ws.write(f"D{row+ 4}", debit_sum, bold_center)
-        ws.write(f"E{row+3}", "KREDIT", bold_center)
-        ws.write(f"E{row + 4}", kredit_sum, bold_center)
+        ws.merge_range(f"A{row+2}:B{row+3}", "GRAND TOTAL", bold_center)
+        ws.write(f"C{row+2}", "SALDO AWAL", bold_center)
+        ws.write(f"C{row+ 3}", saldo_awal_sum, bold_center)
+        ws.write(f"D{row+2}", "DEBET", bold_center)
+        ws.write(f"D{row+ 3}", debit_sum, bold_center)
+        ws.write(f"E{row+2}", "KREDIT", bold_center)
+        ws.write(f"E{row + 3}", kredit_sum, bold_center)
 
         if coa_prefix in [1, 4, 5, 6, 7, 8, 9]:
             grand_total = saldo_paling_awal + saldo_awal_sum + debit_sum - kredit_sum
         else:
             grand_total = saldo_paling_awal + saldo_awal_sum + kredit_sum - debit_sum
 
-        ws.write(f"F{row + 3}", "SALDO AKHIR", bold_center)
-        ws.write(f"F{row + 4}", grand_total, bold_center)
+        ws.write(f"F{row+2}", "SALDO AKHIR", bold_center)
+        ws.write(f"F{row + 3}", grand_total, bold_center)
 
         ws.autofit()
         # Save the file

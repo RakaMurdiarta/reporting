@@ -10,7 +10,7 @@ from modules.report_buku_besar.queries.vendor_saat_mencetak.constant.index impor
 
 def transaksi_tanpa_vendor_detail(task_id, coa, entitas, start_date, end_date):
     sql = f"""
-    SELECT *, LEFT(gl_transaksi_detail.coa,1) as coa_prefix
+    SELECT *, LEFT(gl_transaksi_detail.coa,1) as coa_prefix,gl_transaksi_detail.keterangan as keterangan_transaksi
     FROM gl_transaksi
     JOIN gl_transaksi_detail
         ON gl_transaksi_detail.transaksi_id = gl_transaksi.id
