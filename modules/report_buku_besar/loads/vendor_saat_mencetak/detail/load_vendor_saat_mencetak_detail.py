@@ -152,7 +152,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
                     merge_saldo_awal = True
                 if pd.isna(data_row["no_gl_transaksi"]):
 
-                    if coa_prefix in [1, 4, 5, 6, 7, 8, 9]:
+                    if int(coa_prefix) in [1, 4, 5, 6, 7, 8, 9]:
                         saldo_cal = saldo_awal + debit - kredit
                     else:
                         saldo_cal = saldo_awal + kredit - debit
@@ -196,7 +196,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
                         kredit if not pd.isna(data_row["kredit"]) else "",
                         border,
                     )
-                    if coa_prefix in [1, 4, 5, 6, 7, 8, 9]:
+                    if int(coa_prefix) in [1, 4, 5, 6, 7, 8, 9]:
                         saldo_cal = saldo_awal + debit - kredit
                         ws.write(f"F{row}", saldo_cal, border)
 
@@ -252,7 +252,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
                 ws.write(f"F{saldo_awal_row_tanpa_vendor}", saldo_awal)
 
                 if pd.isna(data_row["no_gl_transaksi"]):
-                    if coa_prefix in [1, 4, 5, 6, 7, 8, 9]:
+                    if int(coa_prefix) in [1, 4, 5, 6, 7, 8, 9]:
                         # ws.write(f"H{saldo}", saldo_vendor_awal)
                         saldo_cal = (
                             saldo_awal + tanpa_vendor_debit - tanpa_vendor_kredit
@@ -303,7 +303,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
                         border,
                     )
 
-                    if coa_prefix in [1, 4, 5, 6, 7, 8, 9]:
+                    if int(coa_prefix) in [1, 4, 5, 6, 7, 8, 9]:
                         # ws.write(f"H{saldo}", saldo_vendor_awal)
                         saldo_cal = (
                             saldo_awal + tanpa_vendor_debit - tanpa_vendor_kredit
@@ -331,7 +331,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         ws.write(f"E{row+2}", "KREDIT", bold_center)
         ws.write(f"E{row + 3}", kredit_sum, bold_center)
 
-        if coa_prefix in [1, 4, 5, 6, 7, 8, 9]:
+        if int(coa_prefix) in [1, 4, 5, 6, 7, 8, 9]:
             grand_total = saldo_paling_awal + saldo_awal_sum + debit_sum - kredit_sum
         else:
             grand_total = saldo_paling_awal + saldo_awal_sum + kredit_sum - debit_sum

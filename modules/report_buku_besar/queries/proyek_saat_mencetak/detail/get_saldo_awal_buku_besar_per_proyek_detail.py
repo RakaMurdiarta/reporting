@@ -24,11 +24,6 @@ def get_saldo_awal_buku_besar_per_proyek_detail(
         cursor = conn.cursor()
         chunk_size = 6000
 
-        if str(coa_number)[0] in ["1", "5", "6", "7", "8"]:
-            saldo_column = "SUM(debit - kredit) AS Saldo"
-        else:
-            saldo_column = "SUM(kredit - debit) AS Saldo"
-
         project_ids = progress[task_id]["filenames"][constants.get_project_by_entitas]
 
         project_ids = pd.read_csv(

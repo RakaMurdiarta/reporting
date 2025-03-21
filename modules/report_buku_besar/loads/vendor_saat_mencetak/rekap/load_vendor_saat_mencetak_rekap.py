@@ -138,7 +138,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
 
                 kredit = data_row["kredit"]
 
-            if coa_prefix in ["1", "4", "5", "6", "7", "8", "9"]:
+            if str(coa_prefix) in ["1", "4", "5", "6", "7", "8", "9"]:
                 saldo = debit - kredit
             else:
                 saldo = kredit - debit

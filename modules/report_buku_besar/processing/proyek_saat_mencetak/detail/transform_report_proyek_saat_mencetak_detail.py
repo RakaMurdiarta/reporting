@@ -37,7 +37,7 @@ def transform(preparing_task_id: str):
 
     coa_prefix = storage_coa[preparing_task_id]["coa_prefix"]
 
-    if coa_prefix in ["1", "5", "6", "7", "8"]:
+    if coa_prefix in ["1", "4", "5", "6", "7", "8", "9"]:
         df_saldo_awal_buku_agg["saldo_awal"] = (
             df_saldo_awal_buku_agg["debit"] - df_saldo_awal_buku_agg["kredit"]
         )

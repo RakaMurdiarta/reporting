@@ -76,7 +76,6 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         ws.write("I8", "Saldo Akhir", header_style)
 
         row = 9  # Start from row 9
-        sum = 0
         debit_sum = 0
         kredit_sum = 0
         saldo_awal_sum = 0
@@ -89,7 +88,6 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
             name = group.iloc[0]["Name"]
             ws.write(f"A{row}", name, bold)
             row += 2  # Move to the next row
-            saldo = row - 1
             saldo_awal = 0
             counting = 1
             saldo_cal = 0
@@ -112,7 +110,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
                 if not pd.isna(data_row["kredit"]):
                     kredit = data_row["kredit"]
 
-                if coa_prefix in [1, 5, 6, 7, 8]:
+                if int(coa_prefix) in [1, 4, 5, 6, 7, 8, 9]:
                     saldo_cal = saldo_awal + debit - kredit
                     ws.write(f"H{row}", saldo_cal)
                 else:
@@ -151,7 +149,6 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
                 row += 1
                 saldo_awal = saldo_cal
                 counting += 1
-                sum += saldo_cal
                 debit_sum += debit
                 kredit_sum += kredit
             ws.merge_range(f"E{merge_first_row}:E{row}", parse_saldo, bold)
@@ -172,7 +169,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         ws.write(f"G{row+3}", "Total Kredit", bold_center)
         ws.write(f"G{row + 4}", kredit_sum, bold_center)
 
-        if coa_prefix in [1, 5, 6, 7, 8]:
+        if int(coa_prefix) in [1, 4, 5, 6, 7, 8, 9]:
             grand_total = (
                 int(saldo_paling_awal) + saldo_awal_sum + debit_sum - kredit_sum
             )
