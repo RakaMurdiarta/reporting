@@ -80,6 +80,8 @@ from modules.report_buku_besar.loads.proyek_saat_mencetak.rekap import (
     load_proyek_saat_mencetak_rekap,
 )
 
+from storages import coa_detail_saldo
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -96,6 +98,14 @@ async def lifespan(app: FastAPI):
         # Menambahkan tugas ekspor ke background
         task_id = str(uuid4())
         views = read_view()
+        store = coa_detail_saldo.read_coa_detail_saldo()
+        if task_id not in store:
+            store[task_id] = {}
+
+        store[task_id]["coa_prefix"] = str(payload.coa_number)[0]
+        store[task_id]["coa_label"] = payload.coa_label
+
+        coa_detail_saldo.write_coa_detail_saldo(store)
         views[task_id] = payload.view
 
         background_tasks.add_task(
