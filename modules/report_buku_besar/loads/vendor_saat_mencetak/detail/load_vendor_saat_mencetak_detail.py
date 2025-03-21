@@ -4,13 +4,15 @@ from modules.report_buku_besar.processing.vendor_saat_mencetak.detail import (
     transform_vendor_saat_mencetak_detail,
 )
 import pandas as pd
+from storages import coa_detail_saldo
 
 
 def load(processing_task_id: str, preparing_task_id: str, filename: str):
     try:
         state_progres = states.read_proccessing()
         preparing_state = states.read_progress()
-
+        store = coa_detail_saldo.read_coa_detail_saldo()
+        coa_label = store[preparing_task_id]["coa_label"]
         state_progres[processing_task_id] = {"status": "started"}
         states.write_proccessing(state_progres)
         state_progres[processing_task_id] = {"status": "process"}
@@ -63,10 +65,17 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         font_14_bold = wb.add_format(
             {"font_size": 14, "bold": True, "align": "center", "valign": "vcenter"}
         )
+        font_12_bold = wb.add_format(
+            {"font_size": 12, "bold": True, "align": "center", "valign": "vcenter"}
+        )
 
         # Set title and period
-        ws.merge_range("A3:G3", "Buku Besar Tampil Per Vendor TJS Detail", font_18_bold)
+        ws.merge_range(
+            "A3:G3", "Buku Besar Konsolidasi Tampil Per Vendor TJS Detail", font_18_bold
+        )
         ws.merge_range("A4:G4", f"Periode : {start_date} - {end_date}", font_14_bold)
+
+        ws.merge_range("A5:G5", f"COA : {coa_label}", font_12_bold)
 
         # to pin column
         # ws.freeze_panes(8, 7)

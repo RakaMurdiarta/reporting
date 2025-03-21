@@ -88,7 +88,9 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         ws.write("D8", "SALDO", header_style)
 
         # Merge and apply custom center-aligned formatting with border
-        ws.merge_range("A3:D3", "Buku Besar Tampil Per Vendor TJS Rekap", center_merged)
+        ws.merge_range(
+            "A3:D3", "Buku Besar Konsolidasi Tampil Per Vendor TJS Rekap", center_merged
+        )
         ws.merge_range(
             "A4:D4", f"Periode : {start_date} - {end_date}", center_merged_font_size_14
         )
@@ -104,6 +106,12 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         total_saldo = 0
         total_debit = 0
         total_kredit = 0
+
+        saldo_paling_awal_vendor = (
+            saldo_paling_awal.iloc[0]["saldo_paling_awal"]
+            if not pd.isna(saldo_paling_awal.iloc[0]["saldo_paling_awal"])
+            else 0
+        )
 
         # Write data to worksheet with borders and a default font style
         for index, data_row in buku_besar_transform_rekap.iterrows():
@@ -153,7 +161,8 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         ws.write(f"C{row}", "KREDIT", border_bold)
         ws.write(f"C{row+1}", total_kredit, border_bold)
         ws.write(f"D{row}", "SALDO AKHIR", border_bold)
-        ws.write(f"D{row+1}", total_saldo, border_bold)
+        grand_total = total_saldo + saldo_paling_awal_vendor
+        ws.write(f"D{row+1}", grand_total, border_bold)
 
         wb.close()
     except Exception as e:
