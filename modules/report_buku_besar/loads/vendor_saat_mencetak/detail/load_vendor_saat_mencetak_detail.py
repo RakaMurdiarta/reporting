@@ -4,13 +4,15 @@ from modules.report_buku_besar.processing.vendor_saat_mencetak.detail import (
     transform_vendor_saat_mencetak_detail,
 )
 import pandas as pd
+from storages import coa_detail_saldo
 
 
 def load(processing_task_id: str, preparing_task_id: str, filename: str):
     try:
         state_progres = states.read_proccessing()
         preparing_state = states.read_progress()
-
+        store = coa_detail_saldo.read_coa_detail_saldo()
+        coa_label = store[preparing_task_id]["coa_label"]
         state_progres[processing_task_id] = {"status": "started"}
         states.write_proccessing(state_progres)
         state_progres[processing_task_id] = {"status": "process"}
@@ -63,10 +65,17 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         font_14_bold = wb.add_format(
             {"font_size": 14, "bold": True, "align": "center", "valign": "vcenter"}
         )
+        font_12_bold = wb.add_format(
+            {"font_size": 12, "bold": True, "align": "center", "valign": "vcenter"}
+        )
 
         # Set title and period
-        ws.merge_range("A3:G3", "Buku Besar Tampil Per Vendor TJS Detail", font_18_bold)
+        ws.merge_range(
+            "A3:G3", "Buku Besar Konsolidasi Tampil Per Vendor TJS Detail", font_18_bold
+        )
         ws.merge_range("A4:G4", f"Periode : {start_date} - {end_date}", font_14_bold)
+
+        ws.merge_range("A5:G5", f"COA : {coa_label}", font_12_bold)
 
         # to pin column
         # ws.freeze_panes(8, 7)
@@ -143,7 +152,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
                     merge_saldo_awal = True
                 if pd.isna(data_row["no_gl_transaksi"]):
 
-                    if coa_prefix in [1, 4, 5, 6, 7, 8, 9]:
+                    if int(coa_prefix) in [1, 4, 5, 6, 7, 8, 9]:
                         saldo_cal = saldo_awal + debit - kredit
                     else:
                         saldo_cal = saldo_awal + kredit - debit
@@ -187,7 +196,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
                         kredit if not pd.isna(data_row["kredit"]) else "",
                         border,
                     )
-                    if coa_prefix in [1, 4, 5, 6, 7, 8, 9]:
+                    if int(coa_prefix) in [1, 4, 5, 6, 7, 8, 9]:
                         saldo_cal = saldo_awal + debit - kredit
                         ws.write(f"F{row}", saldo_cal, border)
 
@@ -243,7 +252,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
                 ws.write(f"F{saldo_awal_row_tanpa_vendor}", saldo_awal)
 
                 if pd.isna(data_row["no_gl_transaksi"]):
-                    if coa_prefix in [1, 4, 5, 6, 7, 8, 9]:
+                    if int(coa_prefix) in [1, 4, 5, 6, 7, 8, 9]:
                         # ws.write(f"H{saldo}", saldo_vendor_awal)
                         saldo_cal = (
                             saldo_awal + tanpa_vendor_debit - tanpa_vendor_kredit
@@ -294,7 +303,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
                         border,
                     )
 
-                    if coa_prefix in [1, 4, 5, 6, 7, 8, 9]:
+                    if int(coa_prefix) in [1, 4, 5, 6, 7, 8, 9]:
                         # ws.write(f"H{saldo}", saldo_vendor_awal)
                         saldo_cal = (
                             saldo_awal + tanpa_vendor_debit - tanpa_vendor_kredit
@@ -322,7 +331,7 @@ def load(processing_task_id: str, preparing_task_id: str, filename: str):
         ws.write(f"E{row+2}", "KREDIT", bold_center)
         ws.write(f"E{row + 3}", kredit_sum, bold_center)
 
-        if coa_prefix in [1, 4, 5, 6, 7, 8, 9]:
+        if int(coa_prefix) in [1, 4, 5, 6, 7, 8, 9]:
             grand_total = saldo_paling_awal + saldo_awal_sum + debit_sum - kredit_sum
         else:
             grand_total = saldo_paling_awal + saldo_awal_sum + kredit_sum - debit_sum

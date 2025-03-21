@@ -14,4 +14,18 @@ def transform(preparing_task_id: str):
         ]
     )
 
-    return df_rekap_group_by_company_vendor
+    saldo_paling_awal = pd.read_csv(
+        preparing_state[preparing_task_id]["filenames"][constants.get_saldo_paling_awal]
+    )
+
+    df_transaksi_tanpa_vendor_rekap = pd.read_csv(
+        preparing_state[preparing_task_id]["filenames"][
+            constants.get_transaksi_tanpa_vendor_rekap
+        ]
+    )
+
+    return (
+        df_rekap_group_by_company_vendor,
+        saldo_paling_awal,
+        df_transaksi_tanpa_vendor_rekap,
+    )
